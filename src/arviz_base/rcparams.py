@@ -227,6 +227,7 @@ _validate_positive_int_or_none = _add_none_to_validator(_validate_positive_int)
 _validate_bokeh_bounds = make_iterable_validator(  # pylint: disable=invalid-name
     _validate_float_or_none, length=2, allow_none=True, allow_auto=True
 )
+_validate_dims = make_iterable_validator(str, length=None, allow_none=False, allow_auto=False)
 
 METAGROUPS = {
     "posterior_groups": ["posterior", "posterior_predictive", "sample_stats", "log_likelihood"],
@@ -242,10 +243,10 @@ METAGROUPS = {
 
 defaultParams = {  # pylint: disable=invalid-name
     "data.http_protocol": ("https", _make_validate_choice({"https", "http"})),
-    "data.load": ("lazy", _make_validate_choice({"lazy", "eager"})),
     "data.metagroups": (METAGROUPS, _validate_dict_of_lists),
     "data.index_origin": (0, _make_validate_choice({0, 1}, typeof=int)),
     "data.log_likelihood": (True, _validate_boolean),
+    "data.sample_dims": (("chain", "draw"), _validate_dims),
     "data.save_warmup": (False, _validate_boolean),
     "plot.backend": ("matplotlib", _make_validate_choice({"matplotlib", "bokeh"})),
     "plot.density_kind": ("kde", _make_validate_choice({"kde", "hist"})),
@@ -473,7 +474,7 @@ def read_rcfile(fname):
                 if not strippedline:
                     continue
                 if multiline:
-                    if strippedline in {"}", ")"}:
+                    if strippedline in {"}"}:
                         multiline = False
                         val = aux_val
                     else:
@@ -490,7 +491,7 @@ def read_rcfile(fname):
                     val = val.strip()
                     if key in config:
                         _log.warning("Duplicate key in file %r line #%d.", fname, line_no)
-                    if key in {"data.metagroups", "data.sample_dims"}:
+                    if key in {"data.metagroups"}:
                         aux_val = []
                         multiline = True
                         continue
