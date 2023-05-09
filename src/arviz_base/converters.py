@@ -1,0 +1,280 @@
+"""Generalistic converters."""
+import numpy as np
+import xarray as xr
+from datatree import DataTree, open_datatree
+
+from .base import dict_to_dataset
+from .rcparams import rcParams
+from .utils import _var_names
+
+
+# pylint: disable=too-many-return-statements
+def convert_to_datatree(obj, **kwargs):
+    r"""Convert a supported object to a DataTree object following ArviZ conventions.
+
+    This function sends `obj` to the right conversion function. It is idempotent,
+    in that it will return DataTree objects unchanged. In general however,
+    it is better to call specific conversion functions directly. See below
+    for more details.
+
+    Parameters
+    ----------
+    obj
+        A supported object to convert to InferenceData:
+
+        * DataTree: returns unchanged
+        * str:
+
+          - If it ends with ``.csv``, attempts to load the file as a cmdstan csv fit
+            using :func:`from_cmdstan`
+          - Otherwise, attempts to load a netcdf or zarr file from disk using :func:`open_datatree`
+
+        * pystan fit: Calls :func:`.from_pystan` with default arguments
+        * cmdstanpy fit: Calls :func:`from_cmdstanpy` with default arguments
+        * cmdstan csv-list: Calls :func:`from_cmdstan` with default arguments
+        * emcee sampler: Calls :func:`from_emcee` with default arguments
+        * pyro MCMC: Calls :func:`from_pyro` with default arguments
+        * numpyro MCMC: calls :func:`from_numpyro` with default arguments
+        * beanmachine MonteCarloSamples: Calls :func:`from_beanmachine` with default arguments
+        * xarray.Dataset: Adds it to the DataTree a the only group. The group name
+          is taken from the ``group`` keyword in `kwargs`.
+        * xarray.DataArray: Adds it to the DataTree as the only variable in a single group.
+          If the ``name`` is not set, "x" is used as name. Like above,
+          the group name is taken from the ``group`` keyword in `kwargs`.
+        * dict: creates an xarray.Dataset with :func:`dict_to_dataset` and adds it
+          to the DataTree as the only group (named with the ``group`` key in `kwargs`).
+        * NumPy NDArray: names the variable "x" and adds it to the DataTree
+          with a single group, named with the ``group`` key in `kwargs`.
+
+    kwargs
+        Rest of the supported keyword arguments transferred to conversion function.
+
+    Returns
+    -------
+    InferenceData
+    """
+    kwargs = kwargs.copy()
+    group = kwargs.pop("group", "posterior")
+
+    # Cases that convert to InferenceData
+    if isinstance(obj, DataTree):
+        return obj
+    if isinstance(obj, str):
+        # if obj.endswith(".csv"):
+        #     if group == "sample_stats":
+        #         kwargs["posterior"] = obj
+        #     elif group == "sample_stats_prior":
+        #         kwargs["prior"] = obj
+        #     return from_cmdstan(**kwargs)
+        return open_datatree(obj, **kwargs)
+    # if (
+    #     obj.__class__.__name__ in {"StanFit4Model", "CmdStanMCMC"}
+    #     or obj.__class__.__module__ == "stan.fit"
+    # ):
+    #     if group == "sample_stats":
+    #         kwargs["posterior"] = obj
+    #     elif group == "sample_stats_prior":
+    #         kwargs["prior"] = obj
+    #     if obj.__class__.__name__ == "CmdStanMCMC":
+    #         return from_cmdstanpy(**kwargs)
+    #     return from_pystan(**kwargs)
+    # if obj.__class__.__name__ == "EnsembleSampler":  # ugly, but doesn't make emcee a requirement
+    #     return from_emcee(sampler=obj, **kwargs)
+    # if obj.__class__.__name__ == "MonteCarloSamples":
+    #     return from_beanmachine(sampler=obj, **kwargs)
+    # if obj.__class__.__name__ == "MCMC" and obj.__class__.__module__.startswith("pyro"):
+    #     return from_pyro(posterior=obj, **kwargs)
+    # if obj.__class__.__name__ == "MCMC" and obj.__class__.__module__.startswith("numpyro"):
+    #     return from_numpyro(posterior=obj, **kwargs)
+
+    # Cases that convert to xarray
+    if isinstance(obj, xr.Dataset):
+        dataset = obj
+    elif isinstance(obj, xr.DataArray):
+        if obj.name is None:
+            obj.name = "x"
+        dataset = obj.to_dataset()
+    elif isinstance(obj, dict):
+        dataset = dict_to_dataset(obj, **kwargs)
+    elif isinstance(obj, np.ndarray):
+        dataset = dict_to_dataset({"x": obj}, **kwargs)
+    # elif isinstance(obj, (list, tuple)) and isinstance(obj[0], str) and obj[0].endswith(".csv"):
+    #     if group == "sample_stats":
+    #         kwargs["posterior"] = obj
+    #     elif group == "sample_stats_prior":
+    #         kwargs["prior"] = obj
+    #     return from_cmdstan(**kwargs)
+    else:
+        allowable_types = (
+            "xarray dataarray",
+            "xarray dataset",
+            "dict",
+            "netcdf filename",
+            "zarr filename",
+            "numpy array",
+            # "pystan fit",
+            # "emcee fit",
+            # "pyro mcmc fit",
+            # "numpyro mcmc fit",
+            # "cmdstan fit csv filename",
+            # "cmdstanpy fit",
+            # "beanmachine montecarlosamples",
+        )
+        raise ValueError(
+            f'Can only convert {", ".join(allowable_types)} to InferenceData, '
+            f"not {obj.__class__.__name__}"
+        )
+
+    return DataTree.from_dict(d={group: dataset})
+
+
+def convert_to_dataset(obj, *, group="posterior", **kwargs):
+    """Convert a supported object to an xarray dataset.
+
+    This function is idempotent, in that it will return xarray.Dataset functions
+    unchanged. Raises `ValueError` if the desired group can not be extracted.
+
+    Note this goes through a DataTree object via :func:`convert_to_datatree`.
+    See its docstring for more details.
+
+    Parameters
+    ----------
+    obj
+        A supported object to convert to InferenceData.
+    group : str, default "posterior"
+        If `obj` is a dict or numpy array, assigns the resulting xarray
+        dataset to this group.
+    **kwargs : dict, optional
+        Keyword arguments passed to :func:`convert_to_datatree`
+
+    Returns
+    -------
+    xarray.Dataset
+        New mutable dataset. See :meth:`datatree.DataTree.to_dataset` for more details.
+
+    Raises
+    ------
+    ValueError
+        If `obj` can't be converted to a DataTree from which to extract the
+        `group` Dataset.
+
+    See Also
+    --------
+    dict_to_dataset
+        Convert a dictionary of arrays to a :class:`xarray.Dataset` following ArviZ conventions.
+    """
+    inference_data = convert_to_datatree(obj, group=group, **kwargs)
+    dataset = getattr(inference_data, group, None)
+    if dataset is None:
+        raise ValueError(
+            f"Can not extract {group} from {obj}! See docs for other " "conversion utilities."
+        )
+    return dataset.to_dataset()
+
+
+def extract(
+    data,
+    group="posterior",
+    combined=True,
+    sample_dims=None,
+    var_names=None,
+    filter_vars=None,
+    num_samples=None,
+    keep_dataset=False,
+    rng=None,
+):
+    """Extract an InferenceData group or subset of it.
+
+    Parameters
+    ----------
+    idata : InferenceData or InferenceData_like
+        InferenceData from which to extract the data.
+    group : str, optional
+        Which InferenceData data group to extract data from.
+    combined : bool, optional
+        Combine `sample_dims` dimensions into ``sample``. Won't work if
+        a dimension named ``sample`` already exists.
+    sample_dims : iterable of hashable, optional
+        List of dimensions that should be considered sampling dimensions.
+        Random subsets and potential stacking if ``combine=True`` happen
+        over these dimensions only. Defaults to ``rcParams["data.sample_dims"]``.
+    var_names : str or list of str, optional
+        Variables to be extracted. Prefix the variables by `~` when you want to exclude them.
+    filter_vars: {None, "like", "regex"}, optional
+        If `None` (default), interpret var_names as the real variables names. If "like",
+        interpret var_names as substrings of the real variables names. If "regex",
+        interpret var_names as regular expressions on the real variables names. A la
+        `pandas.filter`.
+        Like with plotting, sometimes it's easier to subset saying what to exclude
+        instead of what to include
+    num_samples : int, optional
+        Extract only a subset of the samples. Only valid if ``combined=True``
+    keep_dataset : bool, optional
+        If true, always return a DataSet. If false (default) return a DataArray
+        when there is a single variable.
+    rng : bool, int, numpy.Generator, optional
+        Shuffle the samples, only valid if ``combined=True``. By default,
+        samples are shuffled if ``num_samples`` is not ``None``, and are left
+        in the same order otherwise. This ensures that subsetting the samples doesn't return
+        only samples from a single chain and consecutive draws.
+
+    Returns
+    -------
+    xarray.DataArray or xarray.Dataset
+
+    Examples
+    --------
+    The default behaviour is to return the posterior group after stacking the chain and
+    draw dimensions.
+
+    .. jupyter-execute::
+
+        import arviz as az
+        idata = az.load_arviz_data("centered_eight")
+        az.extract(idata)
+
+    You can also indicate a subset to be returned, but in variables and in samples:
+
+    .. jupyter-execute::
+
+        az.extract(idata, var_names="theta", num_samples=100)
+
+    To keep the chain and draw dimensions, use ``combined=False``.
+
+    .. jupyter-execute::
+
+        az.extract(idata, group="prior", combined=False)
+
+    """
+    if num_samples is not None and not combined:
+        raise ValueError("num_samples is only compatible with combined=True")
+    if rng is None:
+        rng = num_samples is not None
+    if rng is not False and not combined:
+        raise ValueError("rng is only compatible with combined=True")
+    data = convert_to_dataset(data, group=group)
+    var_names = _var_names(var_names, data, filter_vars)
+    if var_names is not None:
+        if len(var_names) == 1 and not keep_dataset:
+            var_names = var_names[0]
+        data = data[var_names]
+    if combined:
+        if sample_dims is None:
+            sample_dims = rcParams["data.sample_dims"]
+        data = data.stack(sample=sample_dims)
+    # 0 is a valid seed se we need to check for rng being exactly boolean
+    if rng is not False:
+        if rng is True:
+            rng = np.random.default_rng()
+        # default_rng takes ints or sequences of ints
+        try:
+            rng = np.random.default_rng(rng)
+            random_subset = rng.permutation(np.arange(len(data["sample"])))
+        except TypeError as err:
+            raise TypeError("Unable to initializate numpy random Generator from rng") from err
+        except AttributeError as err:
+            raise AttributeError("Unable to use rng to generate a permutation") from err
+        data = data.isel(sample=random_subset)
+    if num_samples is not None:
+        data = data.isel(sample=slice(None, num_samples))
+    return data

@@ -6,13 +6,6 @@ data.http_protocol           : https # protocol for remote dataset load,
 data.index_origin            : 0     # index origin, must be either 0 or 1
 data.log_likelihood          : true  # save pointwise log likelihood values, one of "true", "false"
 data.sample_dims             : [chain, draw]  # what to assume as sample dimensions
-data.metagroups              : {
-    posterior_groups: posterior, posterior_predictive, sample_stats, log_likelihood
-    prior_groups: prior, prior_predictive, sample_stats_prior
-    posterior_groups_warmup: _warmup_posterior, _warmup_posterior_predictive, _warmup_sample_stats
-    latent_vars: posterior, prior
-    observed_vars: posterior_predictive, observed_data, prior_predictive
-}
 data.save_warmup             : false # save warmup iterations, one of "true", "false"
 
 ### PLOT  ###

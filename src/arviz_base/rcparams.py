@@ -5,7 +5,6 @@ import os
 import pprint
 import re
 import sys
-import warnings
 from collections.abc import MutableMapping
 from pathlib import Path
 from typing import Any, Dict, Literal
@@ -184,23 +183,6 @@ def _validate_bokeh_marker(value):
     return value
 
 
-def _validate_dict_of_lists(values):
-    if isinstance(values, dict):
-        return {key: tuple(item) for key, item in values.items()}
-    validated_dict = {}
-    for value in values:
-        tup = value.split(":", 1)
-        if len(tup) != 2:
-            raise ValueError(f"Could not interpret '{value}' as key: list or str")
-        key, vals = tup
-        key = key.strip(' "')
-        vals = [val.strip(' "') for val in vals.strip(" [],").split(",")]
-        if key in validated_dict:
-            warnings.warn(f"Repeated key {key} when validating dict of lists")
-        validated_dict[key] = tuple(vals)
-    return validated_dict
-
-
 def make_iterable_validator(scalar_validator, length=None, allow_none=False, allow_auto=False):
     """Validate value is an iterable datatype."""
     # based on matplotlib's _listify_validator function
@@ -229,21 +211,9 @@ _validate_bokeh_bounds = make_iterable_validator(  # pylint: disable=invalid-nam
 )
 _validate_dims = make_iterable_validator(str, length=None, allow_none=False, allow_auto=False)
 
-METAGROUPS = {
-    "posterior_groups": ["posterior", "posterior_predictive", "sample_stats", "log_likelihood"],
-    "prior_groups": ["prior", "prior_predictive", "sample_stats_prior"],
-    "posterior_groups_warmup": [
-        "_warmup_posterior",
-        "_warmup_posterior_predictive",
-        "_warmup_sample_stats",
-    ],
-    "latent_vars": ["posterior", "prior"],
-    "observed_vars": ["posterior_predictive", "observed_data", "prior_predictive"],
-}
 
 defaultParams = {  # pylint: disable=invalid-name
     "data.http_protocol": ("https", _make_validate_choice({"https", "http"})),
-    "data.metagroups": (METAGROUPS, _validate_dict_of_lists),
     "data.index_origin": (0, _make_validate_choice({0, 1}, typeof=int)),
     "data.log_likelihood": (True, _validate_boolean),
     "data.sample_dims": (("chain", "draw"), _validate_dims),
@@ -468,33 +438,20 @@ def read_rcfile(fname):
     config = RcParams()
     with open(fname, "r", encoding="utf8") as rcfile:
         try:
-            multiline = False
             for line_no, line in enumerate(rcfile, 1):
                 strippedline = line.split("#", 1)[0].strip()
                 if not strippedline:
                     continue
-                if multiline:
-                    if strippedline in {"}"}:
-                        multiline = False
-                        val = aux_val
-                    else:
-                        aux_val.append(strippedline)
-                        continue
-                else:
-                    tup = strippedline.split(":", 1)
-                    if len(tup) != 2:
-                        error_details = _error_details_fmt % (line_no, line, fname)
-                        _log.warning("Illegal %s", error_details)
-                        continue
-                    key, val = tup
-                    key = key.strip()
-                    val = val.strip()
-                    if key in config:
-                        _log.warning("Duplicate key in file %r line #%d.", fname, line_no)
-                    if key in {"data.metagroups"}:
-                        aux_val = []
-                        multiline = True
-                        continue
+                tup = strippedline.split(":", 1)
+                if len(tup) != 2:
+                    error_details = _error_details_fmt % (line_no, line, fname)
+                    _log.warning("Illegal %s", error_details)
+                    continue
+                key, val = tup
+                key = key.strip()
+                val = val.strip()
+                if key in config:
+                    _log.warning("Duplicate key in file %r line #%d.", fname, line_no)
                 try:
                     config[key] = val
                 except ValueError as verr:

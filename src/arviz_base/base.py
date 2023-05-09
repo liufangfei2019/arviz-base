@@ -1,6 +1,7 @@
 """ArviZ basic functions and converters."""
 import datetime
 import importlib
+import warnings
 from collections.abc import Hashable, Mapping
 from copy import deepcopy
 from typing import TYPE_CHECKING, Any, Iterable, List, Optional, Tuple
@@ -23,6 +24,7 @@ def generate_dims_coords(
     coords: Optional[CoordSpec] = None,
     index_origin: Optional[int] = None,
     skip_event_dims: bool = False,
+    check_conventions: bool = True,
 ) -> Tuple[List[Hashable], CoordSpec]:
     """Generate default dimensions and coordinates for a variable.
 
@@ -50,6 +52,10 @@ def generate_dims_coords(
     skip_event_dims : bool, default False
         Whether to allow for different sizes between `shape` and `dims`.
         See description in `dims` for more details.
+    check_conventions : bool, optional
+        Check ArviZ conventions. Per the ArviZ schema, some dimension names
+        have specific meaning and there might be inconsistencies caught here
+        in the dimension naming step.
 
 
     Returns
@@ -96,17 +102,39 @@ def generate_dims_coords(
                 dims = dims[:i]
                 break
 
+    missing_dim_count = 0
     for idx, dim_len in enumerate(shape):
         if idx + 1 > len(dims):
-            dim_name = f"{var_name}_dim_{idx}"
+            dim_name = f"{var_name}_dim_{missing_dim_count}"
+            missing_dim_count += 1
             dims.append(dim_name)
         elif dims[idx] is None:
-            dim_name = f"{var_name}_dim_{idx}"
+            dim_name = f"{var_name}_dim_{missing_dim_count}"
+            missing_dim_count += 1
             dims[idx] = dim_name
         dim_name = dims[idx]
         if dim_name not in coords:
             coords[dim_name] = np.arange(index_origin, dim_len + index_origin)
     coords = {dim_name: coords[dim_name] for dim_name in dims}
+    if check_conventions:
+        short_long_pairs = (("draw", "chain"), ("draw", "pred_id"), ("sample", "pred_id"))
+        for long_dim, short_dim in short_long_pairs:
+            if (
+                long_dim in dims
+                and short_dim in dims
+                and len(coords[short_dim]) > len(coords[long_dim])
+            ):
+                warnings.warn(
+                    f"Found {short_dim} dimension to be longer than {long_dim} dimension, "
+                    "check dimensions are correctly named.",
+                    UserWarning,
+                )
+        if "sample" in dims and (("draw" in dims) or ("chain" in dims)):
+            warnings.warn(
+                "Found dimension named 'sample' alongside 'chain'/'draw' ones, "
+                "check dimensions are correctly named.",
+                UserWarning,
+            )
     return dims, coords
 
 
@@ -120,6 +148,7 @@ def dict_to_dataset(
     sample_dims: Optional[Iterable[Hashable]] = None,
     index_origin: Optional[int] = None,
     skip_event_dims: bool = False,
+    check_conventions: bool = True,
 ):
     """Convert a dictionary of numpy arrays to an xarray.Dataset.
 
@@ -155,8 +184,12 @@ def dict_to_dataset(
         leading axis.
     index_origin : int, optional
         Passed to :func:`generate_dims_coords`
-    skip_event_dims : bool
+    skip_event_dims : bool, optional
         Passed to :func:`generate_dims_coords`
+    check_conventions : bool, optional
+        Check ArviZ conventions. Per the ArviZ schema, some dimension names
+        have specific meaning and there might be inconsistencies caught here
+        in the dimension naming step.
 
     Returns
     -------
@@ -200,11 +233,12 @@ def dict_to_dataset(
 
     data_vars = {}
     for var_name, values in data.items():
-        in_dims = dims.get(var_name, [])
         if sample_dims:
-            var_dims = [
-                sample_dim for sample_dim in sample_dims if sample_dim not in var_dims
-            ].extend(in_dims)
+            in_dims = dims.get(var_name, [])
+            var_dims = [sample_dim for sample_dim in sample_dims if sample_dim not in in_dims]
+            var_dims.extend(in_dims)
+        else:
+            var_dims = dims.get(var_name, [])
         var_dims, var_coords = generate_dims_coords(
             values.shape,
             var_name=var_name,
@@ -212,6 +246,7 @@ def dict_to_dataset(
             coords=coords,
             index_origin=index_origin,
             skip_event_dims=skip_event_dims,
+            check_conventions=check_conventions,
         )
         data_vars[var_name] = xr.DataArray(values, coords=var_coords, dims=var_dims)
 
