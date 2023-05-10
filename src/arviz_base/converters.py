@@ -7,6 +7,8 @@ from .base import dict_to_dataset
 from .rcparams import rcParams
 from .utils import _var_names
 
+__all__ = ["convert_to_datatree", "convert_to_dataset", "extract"]
+
 
 # pylint: disable=too-many-return-statements
 def convert_to_datatree(obj, **kwargs):
@@ -22,36 +24,37 @@ def convert_to_datatree(obj, **kwargs):
     obj
         A supported object to convert to InferenceData:
 
-        * DataTree: returns unchanged
-        * str:
+         * DataTree: returns unchanged
+         * str:
 
-          - If it ends with ``.csv``, attempts to load the file as a cmdstan csv fit
-            using :func:`from_cmdstan`
-          - Otherwise, attempts to load a netcdf or zarr file from disk using :func:`open_datatree`
+           - If it ends with ``.csv``, attempts to load the file as a cmdstan csv fit
+             using :func:`from_cmdstan`
+           - Otherwise, attempts to load a netcdf or zarr file from disk
+             using :func:`open_datatree`
 
-        * pystan fit: Calls :func:`.from_pystan` with default arguments
-        * cmdstanpy fit: Calls :func:`from_cmdstanpy` with default arguments
-        * cmdstan csv-list: Calls :func:`from_cmdstan` with default arguments
-        * emcee sampler: Calls :func:`from_emcee` with default arguments
-        * pyro MCMC: Calls :func:`from_pyro` with default arguments
-        * numpyro MCMC: calls :func:`from_numpyro` with default arguments
-        * beanmachine MonteCarloSamples: Calls :func:`from_beanmachine` with default arguments
-        * xarray.Dataset: Adds it to the DataTree a the only group. The group name
-          is taken from the ``group`` keyword in `kwargs`.
-        * xarray.DataArray: Adds it to the DataTree as the only variable in a single group.
-          If the ``name`` is not set, "x" is used as name. Like above,
-          the group name is taken from the ``group`` keyword in `kwargs`.
-        * dict: creates an xarray.Dataset with :func:`dict_to_dataset` and adds it
-          to the DataTree as the only group (named with the ``group`` key in `kwargs`).
-        * NumPy NDArray: names the variable "x" and adds it to the DataTree
-          with a single group, named with the ``group`` key in `kwargs`.
+         * pystan fit: Calls :func:`.from_pystan` with default arguments
+         * cmdstanpy fit: Calls :func:`from_cmdstanpy` with default arguments
+         * cmdstan csv-list: Calls :func:`from_cmdstan` with default arguments
+         * emcee sampler: Calls :func:`from_emcee` with default arguments
+         * pyro MCMC: Calls :func:`from_pyro` with default arguments
+         * numpyro MCMC: calls :func:`from_numpyro` with default arguments
+         * beanmachine MonteCarloSamples: Calls :func:`from_beanmachine` with default arguments
+         * `xarray.Dataset`: Adds it to the DataTree a the only group. The group name
+           is taken from the ``group`` keyword in `kwargs`.
+         * `xarray.DataArray`: Adds it to the DataTree as the only variable in a single group.
+           If the ``name`` is not set, "x" is used as name. Like above,
+           the group name is taken from the ``group`` keyword in `kwargs`.
+         * dict: creates an xarray.Dataset with :func:`dict_to_dataset` and adds it
+           to the DataTree as the only group (named with the ``group`` key in `kwargs`).
+         * `numpy.ndarray`: names the variable "x" and adds it to the DataTree
+           with a single group, named with the ``group`` key in `kwargs`.
 
     kwargs
         Rest of the supported keyword arguments transferred to conversion function.
 
     Returns
     -------
-    InferenceData
+    DataTree
     """
     kwargs = kwargs.copy()
     group = kwargs.pop("group", "posterior")
@@ -229,7 +232,7 @@ def extract(
 
     .. jupyter-execute::
 
-        import arviz as az
+        import arviz_base as az
         idata = az.load_arviz_data("centered_eight")
         az.extract(idata)
 

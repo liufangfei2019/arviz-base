@@ -54,9 +54,14 @@ doc = [
     "numpydoc",
     "sphinx>=5",
     "sphinx-design",
+    "jupyter-sphinx",
+    "netcdf4"
 ]
-netcdf = [
+netcdf4 = [
   "netcdf4"
+]
+h5netcdf = [
+  "h5netcdf"
 ]
 zarr = [
   "zarr"

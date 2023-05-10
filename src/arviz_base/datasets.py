@@ -11,6 +11,8 @@ from datatree import open_datatree
 
 from .rcparams import rcParams
 
+__all__ = ["get_data_home", "clear_data_home", "list_datasets", "load_arviz_data"]
+
 LocalFileMetadata = namedtuple("LocalFileMetadata", ["name", "filename", "description"])
 
 RemoteFileMetadata = namedtuple(

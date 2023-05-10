@@ -193,36 +193,40 @@ def dict_to_dataset(
 
     Returns
     -------
-    xarray.Dataset
+    Dataset
+
+    See Also
+    --------
+    convert_to_dataset
+        General conversion to `xarray.Dataset` via :func:`convert_to_datatree`
 
     Examples
     --------
     Generate a :class:`~xarray.Dataset` with two variables
     using ``sample_dims``:
 
-    .. ipython::
+    .. jupyter-execute::
 
-        In [1]: from arviz_base import dict_to_dataset
-           ...: import numpy as np
-           ...:
-           ...: rng = np.random.default_rng(2)
-           ...: dict_to_dataset(
-           ...:     {"a": rng.normal(size=(4, 100)), "b": rng.normal(size=(4, 100))},
-           ...:     sample_dims=["chain", "draw"],
-           ...: )
+        import arviz_base as az
+        import numpy as np
+        rng = np.random.default_rng(2)
+        az.dict_to_dataset(
+            {"a": rng.normal(size=(4, 100)), "b": rng.normal(size=(4, 100))},
+            sample_dims=["chain", "draw"],
+        )
 
     Generate a :class:`~xarray.Dataset` with the ``chain`` and ``draw``
     dimensions in different position. Setting the dimensions for ``a``
     to "group" and "chain", ``sample_dims`` will then be used to prepend
     the "draw" dimension only as "chain" is already there.
 
-    .. ipython::
+    .. jupyter-execute::
 
-        In [2]: dict_to_dataset(
-           ...:     {"a": rng.normal(size=(10, 5, 4)), "b": rng.normal(size=(10, 4))},
-           ...:     dims={"a": ["group", "chain"]}
-           ...:     sample_dims=["draw", "chain"]
-           ...: )
+        az.dict_to_dataset(
+            {"a": rng.normal(size=(10, 5, 4)), "b": rng.normal(size=(10, 4))},
+            dims={"a": ["group", "chain"]},
+            sample_dims=["draw", "chain"],
+        )
 
     """
     if dims is None:
