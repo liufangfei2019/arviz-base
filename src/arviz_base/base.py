@@ -4,7 +4,7 @@ import importlib
 import warnings
 from collections.abc import Hashable, Mapping
 from copy import deepcopy
-from typing import TYPE_CHECKING, Any, Iterable, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
 
 import numpy as np
 import xarray as xr
@@ -15,6 +15,9 @@ from .types import CoordSpec, DictData, DimSpec
 
 if TYPE_CHECKING:
     from numpy.typing import ArrayLike
+
+RequiresArgTypeT = TypeVar("RequiresArgTypeT")
+RequiresReturnTypeT = TypeVar("RequiresReturnTypeT")
 
 
 def generate_dims_coords(
@@ -244,7 +247,7 @@ def dict_to_dataset(
         else:
             var_dims = dims.get(var_name, [])
         var_dims, var_coords = generate_dims_coords(
-            values.shape,
+            values.shape if hasattr(values, "shape") else (),
             var_name=var_name,
             dims=var_dims,
             coords=coords,
@@ -293,3 +296,36 @@ def make_attrs(attrs=None, inference_library=None):
     if attrs is not None:
         default_attrs.update(attrs)
     return default_attrs
+
+
+class requires:  # pylint: disable=invalid-name
+    """Decorator to return None if an object does not have the required attribute.
+
+    If the decorator is called various times on the same function with different
+    attributes, it will return None if one of them is missing. If instead a list
+    of attributes is passed, it will return None if all attributes in the list are
+    missing. Both functionalities can be combined as desired.
+
+    It can only be used to decorate functions/methods with a single argument,
+    e.g. ``posterior_to_xarray(self)`` is valid,
+    but ``posterior_to_xarray(self, other_arg)`` would not be.
+    See https://github.com/arviz-devs/arviz/pull/1504 for more discussion.
+    """
+
+    def __init__(self, *props: Union[str, List[str]]) -> None:
+        self.props: Tuple[Union[str, List[str]], ...] = props
+
+    def __call__(
+        self, func: Callable[[RequiresArgTypeT], RequiresReturnTypeT]
+    ) -> Callable[[RequiresArgTypeT], Optional[RequiresReturnTypeT]]:  # noqa: D202
+        """Wrap the decorated function."""
+
+        def wrapped(cls: RequiresArgTypeT) -> Optional[RequiresReturnTypeT]:
+            """Return None if not all props are available."""
+            for prop in self.props:
+                prop = [prop] if isinstance(prop, str) else prop
+                if all((getattr(cls, prop_i) is None for prop_i in prop)):
+                    return None
+            return func(cls)
+
+        return wrapped
