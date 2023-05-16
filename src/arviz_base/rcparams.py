@@ -262,7 +262,7 @@ defaultParams = {  # pylint: disable=invalid-name
         lambda x: x,
     ),
     "plot.matplotlib.show": (False, _validate_boolean),
-    "stats.hdi_prob": (0.94, _validate_probability),
+    "stats.hdi_prob": (0.83, _validate_probability),
     "stats.information_criterion": (
         "loo",
         _make_validate_choice(set(get_args(ICKeyword))),

@@ -3,13 +3,9 @@ import numpy as np
 import pytest
 
 from arviz_base import from_dict
+from arviz_base.testing import check_multiple_attrs
 
-from .helpers import (  # pylint: disable=unused-import
-    chains,
-    check_multiple_attrs,
-    draws,
-    eight_schools_params,
-)
+from .helpers import chains, draws, eight_schools_params  # pylint: disable=unused-import
 
 
 @pytest.fixture(scope="function")
