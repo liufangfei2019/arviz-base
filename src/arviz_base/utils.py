@@ -129,3 +129,56 @@ def _subset_list(subset, whole_list, filter_items=None, warn=True):
             raise KeyError(f"{np.array(subset)[~existing_items]} are not present")
 
     return subset
+
+
+def _get_coords(data, coords):
+    """Subselects xarray DataSet or DataArray object to provided coords. Raises exception if fails.
+
+    Parameters
+    ----------
+    data : DataArray, Dataset or list of DataArray or Dataset
+        Xarray objects to be subsetted. It can be a list or tuple, in which
+        case all xarray objects whithin the iterable will be subsetted.
+    coords : dict of {hashable: array_like}
+        Dictionary specifying the subset to select. Passed to
+        :meth:`xarray.Dataset.sel` or :meth:`xarray.DataArray.sel`
+        depending on the input.
+
+    Raises
+    ------
+    ValueError
+        If coord values name are not available in data
+
+    KeyError
+        If dimension names are not available in data
+
+    Returns
+    -------
+    data : Dataset or DataArray
+        Return type is of the same type as the input
+    """
+    if not isinstance(data, (list, tuple)):
+        try:
+            return data.sel(**coords)
+
+        except ValueError as err:
+            invalid_coords = set(coords.keys()) - set(data.coords.keys())
+            raise ValueError(f"Coords {invalid_coords} are invalid coordinate keys") from err
+
+        except KeyError as err:
+            raise KeyError(
+                "Coords should follow mapping format {{coord_name:[dim1, dim2]}}. "
+                "Check that coords structure is correct and"
+                f" dimensions are valid. {err}"
+            ) from err
+    if not isinstance(coords, (list, tuple)):
+        coords = [coords] * len(data)
+    data_subset = []
+    for idx, (datum, coords_dict) in enumerate(zip(data, coords)):
+        try:
+            data_subset.append(_get_coords(datum, coords_dict))
+        except ValueError as err:
+            raise ValueError(f"Error in data[{idx}]: {err}") from err
+        except KeyError as err:
+            raise KeyError(f"Error in data[{idx}]: {err}") from err
+    return data_subset
