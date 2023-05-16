@@ -66,7 +66,7 @@ def convert_to_datatree(obj, **kwargs):
     kwargs = kwargs.copy()
     group = kwargs.pop("group", "posterior")
 
-    # Cases that convert to InferenceData
+    # Cases that convert to DataTree
     if isinstance(obj, DataTree):
         return obj
     if isinstance(obj, str):
@@ -175,6 +175,8 @@ def convert_to_dataset(obj, *, group="posterior", **kwargs):
     dict_to_dataset
         Convert a dictionary of arrays to a :class:`xarray.Dataset` following ArviZ conventions.
     """
+    if isinstance(obj, DataTree) and obj.name == group:
+        return obj.to_dataset()
     inference_data = convert_to_datatree(obj, group=group, **kwargs)
     dataset = getattr(inference_data, group, None)
     if dataset is None:
