@@ -25,6 +25,8 @@ def convert_to_datatree(obj, **kwargs):
         A supported object to convert to InferenceData:
 
          * DataTree: returns unchanged
+         * InferenceData: returns the equivalent DataTree. `kwargs` are passed
+           to :meth:`datatree.DataTree.from_dict`.
          * str:
 
            - If it ends with ``.csv``, attempts to load the file as a cmdstan csv fit
@@ -55,6 +57,11 @@ def convert_to_datatree(obj, **kwargs):
     Returns
     -------
     DataTree
+
+    See Also
+    --------
+    from_dict
+        Convert a nested dictionary of {group_name: {var_name: data}} to a DataTree.
     """
     kwargs = kwargs.copy()
     group = kwargs.pop("group", "posterior")
@@ -70,6 +77,8 @@ def convert_to_datatree(obj, **kwargs):
         #         kwargs["prior"] = obj
         #     return from_cmdstan(**kwargs)
         return open_datatree(obj, **kwargs)
+    if obj.__class__.__name__ == "InferenceData":
+        return DataTree.from_dict({group: obj[group] for group in obj.groups()}, **kwargs)
     # if (
     #     obj.__class__.__name__ in {"StanFit4Model", "CmdStanMCMC"}
     #     or obj.__class__.__module__ == "stan.fit"

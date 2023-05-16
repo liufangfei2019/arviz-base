@@ -1,15 +1,14 @@
 # API reference
 
+## User facing converters
+
 ```{eval-rst}
 .. autosummary::
    :toctree: generated/
 
-   arviz_base.convert_to_dataset
    arviz_base.convert_to_datatree
-   arviz_base.dict_to_dataset
    arviz_base.extract
-   arviz_base.generate_dims_coords
-   arviz_base.make_attrs
+   arviz_base.from_dict
 ```
 
 
@@ -32,4 +31,16 @@
    :toctree: generated/
 
    arviz_base.rc_context
+```
+
+## Conversion utilities
+
+```{eval-rst}
+.. autosummary::
+   :toctree: generated/
+
+   arviz_base.convert_to_dataset
+   arviz_base.dict_to_dataset
+   arviz_base.generate_dims_coords
+   arviz_base.make_attrs
 ```

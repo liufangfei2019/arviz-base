@@ -22,10 +22,10 @@ def from_dict(
     check_conventions=True,
     attrs=None,
 ):
-    """Convert dictionary data into a DataTree.
+    """Convert nested dictionary into a DataTree.
 
-    For a usage example read the
-    :ref:`Creating InferenceData section on from_dict <creating_InferenceData>`
+    It uses :func:`dict_to_dataset` to convert a nested dictionary to a DataTree
+    using ArviZ conventions.
 
     Parameters
     ----------
@@ -80,6 +80,10 @@ def from_dict(
     Returns
     -------
     DataTree
+
+    See Also
+    --------
+    datatree.DataTree.from_dict
     """
     d_ds = {}
     if attrs is None:
