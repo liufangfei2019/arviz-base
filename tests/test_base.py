@@ -6,18 +6,16 @@ from urllib.parse import urlunsplit
 
 import numpy as np
 import pytest
-import xarray as xr
 from datatree import DataTree
+from xarray.testing import assert_allclose
 
 from arviz_base import (
-    convert_to_dataset,
-    convert_to_datatree,
     dict_to_dataset,
-    extract,
     generate_dims_coords,
     list_datasets,
     load_arviz_data,
     make_attrs,
+    ndarray_to_dataarray,
 )
 from arviz_base.datasets import LOCAL_DATASETS, REMOTE_DATASETS, RemoteFileMetadata, clear_data_home
 
@@ -167,126 +165,9 @@ def test_make_attrs():
     assert "creation_library" in attrs
 
 
-class TestNumpyToDataArray:
-    def test_1d_dataset(self):
-        size = 100
-        dataset = convert_to_dataset(np.random.randn(size), sample_dims=["sample"])
-        assert len(dataset.data_vars) == 1
-
-        assert set(dataset.coords) == {"sample"}
-        assert dataset.dims["sample"] == size
-
-    def test_warns_bad_shape(self):
-        ary = np.random.randn(100, 4)
-        # Shape should be (chain, draw, *shape)
-        with pytest.warns(UserWarning, match="Found chain dimension to be longer than draw"):
-            convert_to_dataset(ary, sample_dims=("chain", "draw"))
-        # Shape should now be (draw, chain, *shape)
-        dataset = convert_to_dataset(ary, sample_dims=("draw", "chain"))
-        assert dataset.dims["chain"] == 4
-        assert dataset.dims["draw"] == 100
-
-    def test_nd_to_dataset(self):
-        shape = (1, 20, 3, 4, 5)
-        dataset = convert_to_dataset(
-            np.random.randn(*shape), sample_dims=("chain", "draw", "pred_id")
-        )
-        assert len(dataset.data_vars) == 1
-        var_name = list(dataset.data_vars)[0]
-
-        assert len(dataset.coords) == len(shape)
-        assert dataset.dims["chain"] == shape[0]
-        assert dataset.dims["draw"] == shape[1]
-        assert dataset.dims["pred_id"] == shape[2]
-        assert dataset[var_name].shape == shape
-
-    def test_nd_to_datatree(self):
-        shape = (1, 2, 3, 4, 5)
-        data = convert_to_datatree(np.random.randn(*shape), group="prior")
-        assert "/prior" in data.groups
-        prior = data["prior"]
-        assert len(prior.data_vars) == 1
-        var_name = list(prior.data_vars)[0]
-
-        assert len(prior.coords) == len(shape)
-        assert prior.dims["chain"] == shape[0]
-        assert prior.dims["draw"] == shape[1]
-        assert prior[var_name].shape == shape
-
-    def test_more_chains_than_draws(self):
-        shape = (10, 4)
-        with pytest.warns(UserWarning):
-            data = convert_to_datatree(np.random.randn(*shape), group="prior")
-        assert "/prior" in data.groups
-        prior = data["prior"]
-        assert len(prior.data_vars) == 1
-        var_name = list(prior.data_vars)[0]
-
-        assert len(prior.coords) == len(shape)
-        assert prior.dims["chain"] == shape[0]
-        assert prior.dims["draw"] == shape[1]
-        assert prior[var_name].shape == shape
-
-
-class TestConvertToDataset:
-    @pytest.fixture(scope="class")
-    def data(self):
-        # pylint: disable=attribute-defined-outside-init
-        class Data:
-            datadict = {
-                "a": np.random.randn(1, 100),
-                "b": np.random.randn(1, 100, 10),
-                "c": np.random.randn(1, 100, 3, 4),
-            }
-            coords = {"c1": np.arange(3), "c2": np.arange(4), "b1": np.arange(10)}
-            dims = {"b": ["b1"], "c": ["c1", "c2"]}
-
-        return Data
-
-    def test_use_all(self, data):
-        dataset = convert_to_dataset(data.datadict, coords=data.coords, dims=data.dims)
-        assert set(dataset.data_vars) == {"a", "b", "c"}
-        assert set(dataset.coords) == {"chain", "draw", "c1", "c2", "b1"}
-
-        assert set(dataset.a.coords) == {"chain", "draw"}
-        assert set(dataset.b.coords) == {"chain", "draw", "b1"}
-        assert set(dataset.c.coords) == {"chain", "draw", "c1", "c2"}
-
-    def test_missing_coords(self, data):
-        dataset = convert_to_dataset(data.datadict, coords=None, dims=data.dims)
-        assert set(dataset.data_vars) == {"a", "b", "c"}
-        assert set(dataset.coords) == {"chain", "draw", "c1", "c2", "b1"}
-
-        assert set(dataset.a.coords) == {"chain", "draw"}
-        assert set(dataset.b.coords) == {"chain", "draw", "b1"}
-        assert set(dataset.c.coords) == {"chain", "draw", "c1", "c2"}
-
-    def test_missing_dims(self, data):
-        # missing dims
-        coords = {"c_dim_0": np.arange(3), "c_dim_1": np.arange(4), "b_dim_0": np.arange(10)}
-        dataset = convert_to_dataset(data.datadict, coords=coords, dims=None)
-        assert set(dataset.data_vars) == {"a", "b", "c"}
-        assert set(dataset.coords) == {"chain", "draw", "c_dim_0", "c_dim_1", "b_dim_0"}
-
-        assert set(dataset.a.coords) == {"chain", "draw"}
-        assert set(dataset.b.coords) == {"chain", "draw", "b_dim_0"}
-        assert set(dataset.c.coords) == {"chain", "draw", "c_dim_0", "c_dim_1"}
-
-    def test_skip_dim_0(self, data):
-        dims = {"c": [None, "c2"]}
-        coords = {"c_dim_0": np.arange(3), "c2": np.arange(4), "b_dim_0": np.arange(10)}
-        dataset = convert_to_dataset(data.datadict, coords=coords, dims=dims)
-        assert set(dataset.data_vars) == {"a", "b", "c"}
-        assert set(dataset.coords) == {"chain", "draw", "c_dim_0", "c2", "b_dim_0"}
-
-        assert set(dataset.a.coords) == {"chain", "draw"}
-        assert set(dataset.b.coords) == {"chain", "draw", "b_dim_0"}
-        assert set(dataset.c.coords) == {"chain", "draw", "c_dim_0", "c2"}
-
-
 def test_dict_to_dataset():
     datadict = {"a": np.random.randn(1, 100), "b": np.random.randn(1, 100, 10)}
-    dataset = convert_to_dataset(datadict, coords={"c": np.arange(10)}, dims={"b": ["c"]})
+    dataset = dict_to_dataset(datadict, coords={"c": np.arange(10)}, dims={"b": ["c"]})
     assert set(dataset.data_vars) == {"a", "b"}
     assert set(dataset.coords) == {"chain", "draw", "c"}
 
@@ -299,120 +180,23 @@ def test_dict_to_dataset_event_dims_error():
     coords = {"b": np.arange(10), "c": ["x", "y", "z"]}
     msg = "more dims"
     with pytest.raises(ValueError, match=msg):
-        convert_to_dataset(datadict, coords=coords, dims={"a": ["b", "c"]})
+        dict_to_dataset(datadict, coords=coords, dims={"a": ["b", "c"]})
 
 
 def test_dict_to_dataset_with_tuple_coord():
     datadict = {"a": np.random.randn(1, 100), "b": np.random.randn(1, 100, 10)}
     with pytest.raises(TypeError, match="Could not convert tuple"):
-        convert_to_dataset(datadict, coords={"c": tuple(range(10))}, dims={"b": ["c"]})
+        dict_to_dataset(datadict, coords={"c": tuple(range(10))}, dims={"b": ["c"]})
 
 
-def test_convert_to_dataset_idempotent():
-    first = convert_to_dataset(np.random.randn(1, 100))
-    second = convert_to_dataset(first)
-    assert first.equals(second)
-
-
-def test_convert_to_datatree_idempotent():
-    first = convert_to_datatree(np.random.randn(1, 100), group="prior")
-    second = convert_to_datatree(first)
-    assert first.prior is second.prior
-
-
-def test_convert_to_datatree_from_file(tmpdir):
-    first = convert_to_datatree(np.random.randn(1, 100), group="prior")
-    filename = str(tmpdir.join("test_file.nc"))
-    first.to_netcdf(filename)
-    second = convert_to_datatree(filename)
-    assert first.prior.equals(second.prior)
-
-
-def test_convert_to_datatree_bad():
-    with pytest.raises(ValueError):
-        convert_to_datatree(1)
-
-
-def test_convert_to_dataset_bad(tmpdir):
-    first = convert_to_datatree(np.random.randn(1, 100), group="prior")
-    filename = str(tmpdir.join("test_file.nc"))
-    first.to_netcdf(filename)
-    with pytest.raises(ValueError):
-        convert_to_dataset(filename, group="bar")
-
-
-class TestDataConvert:
-    @pytest.fixture(scope="class")
-    def data(self, draws, chains):
-        class Data:
-            # fake 8-school output
-            obj = {}
-            for key, shape in {"mu": [], "tau": [], "eta": [8], "theta": [8]}.items():
-                obj[key] = np.random.randn(chains, draws, *shape)
-
-        return Data
-
-    def get_datatree(self, data):
-        return convert_to_datatree(
-            data.obj,
-            group="posterior",
-            coords={"school": np.arange(8)},
-            dims={"theta": ["school"], "eta": ["school"]},
-        )
-
-    def check_var_names_coords_dims(self, dataset):
-        assert set(dataset.data_vars) == {"mu", "tau", "eta", "theta"}
-        assert set(dataset.coords) == {"chain", "draw", "school"}
-
-    def test_convert_to_datatree(self, data):
-        data = self.get_datatree(data)
-        assert "/posterior" in data.groups
-        self.check_var_names_coords_dims(data.posterior)
-
-    def test_convert_to_dataset(self, draws, chains, data):
-        dataset = dict_to_dataset(
-            data.obj,
-            coords={"school": np.arange(8)},
-            dims={"theta": ["school"], "eta": ["school"]},
-        )
-        assert dataset.draw.shape == (draws,)
-        assert dataset.chain.shape == (chains,)
-        assert dataset.school.shape == (8,)
-        assert dataset.theta.shape == (chains, draws, 8)
-
-
-class TestExtract:
-    def test_default(self, centered_eight):
-        post = extract(centered_eight)
-        assert isinstance(post, xr.Dataset)
-        assert "sample" in post.dims
-        assert post.theta.size == (4 * 500 * 8)
-
-    def test_seed(self, centered_eight):
-        post = extract(centered_eight, rng=7)
-        post_pred = extract(centered_eight, group="posterior_predictive", rng=7)
-        assert all(post.sample == post_pred.sample)
-
-    def test_no_combine(self, centered_eight):
-        post = extract(centered_eight, combined=False)
-        assert "sample" not in post.dims
-        assert post.dims["chain"] == 4
-        assert post.dims["draw"] == 500
-
-    def test_var_name_group(self, centered_eight):
-        prior = extract(centered_eight, group="prior", var_names="the", filter_vars="like")
-        assert {} == prior.attrs
-        assert "theta" in prior.name
-
-    def test_keep_dataset(self, centered_eight):
-        prior = extract(
-            centered_eight, group="prior", var_names="the", filter_vars="like", keep_dataset=True
-        )
-        assert prior.attrs == centered_eight.prior.attrs
-        assert "theta" in prior.data_vars
-        assert "mu" not in prior.data_vars
-
-    def test_subset_samples(self, centered_eight):
-        post = extract(centered_eight, num_samples=10)
-        assert post.dims["sample"] == 10
-        assert post.attrs == centered_eight.posterior.attrs
+@pytest.mark.parametrize(
+    "args",
+    [(["chain", "draw"], (4, 10)), (["sample"], (10,)), (["chain", "draw", "pred_id"], (4, 10, 3))],
+)
+def test_ndarray_to_dataarray(args):
+    dims, shape = args
+    rng = np.random.default_rng(3)
+    ary = rng.normal(size=shape)
+    with_dims = ndarray_to_dataarray(ary, "x", dims=dims, sample_dims=[])
+    with_sample_dims = ndarray_to_dataarray(ary, "x", dims=[], sample_dims=dims)
+    assert_allclose(with_sample_dims, with_dims)

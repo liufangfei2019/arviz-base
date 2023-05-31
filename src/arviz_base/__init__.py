@@ -5,7 +5,7 @@ import logging
 
 _log = logging.getLogger(__name__)
 
-from .base import generate_dims_coords, dict_to_dataset, make_attrs
+from .base import generate_dims_coords, dict_to_dataset, make_attrs, ndarray_to_dataarray
 from .converters import *
 from .datasets import load_arviz_data, list_datasets, get_data_home, clear_data_home
 from .io_dict import from_dict

@@ -3,7 +3,9 @@ import os
 
 import numpy as np
 import pytest
+from xarray.testing import assert_allclose
 
+from arviz_base import ndarray_to_dataarray
 from arviz_base.rcparams import (
     _make_validate_choice,
     _make_validate_choice_regex,
@@ -29,7 +31,7 @@ def test_rc_context_dict():
 def test_rc_context_file():
     path = os.path.dirname(os.path.abspath(__file__))
     rcParams["plot.point_estimate"] = "mean"
-    with rc_context(fname=os.path.join(path, "test.rcparams")):
+    with rc_context(fname=os.path.join(path, "valid.rcparams")):
         assert rcParams["plot.point_estimate"] == "median"
     assert rcParams["plot.point_estimate"] == "mean"
 
@@ -44,7 +46,7 @@ def test_bad_rc_file():
 def test_warning_rc_file(caplog):
     """Test invalid lines and duplicated keys log warnings and bad value raises error."""
     path = os.path.dirname(os.path.abspath(__file__))
-    read_rcfile(os.path.join(path, "test.rcparams"))
+    read_rcfile(os.path.join(path, "valid.rcparams"))
     records = caplog.records
     assert len(records) == 1
     assert records[0].levelname == "WARNING"
@@ -254,3 +256,20 @@ def test_validate_probability(args):
     else:
         value = _validate_probability(value)
         assert isinstance(value, float)
+
+
+## Some simple integration checks with rcparams
+def test_sample_dims():
+    rng = np.random.default_rng(3)
+    ary = rng.normal(size=(4, 10, 3))
+    da1 = ndarray_to_dataarray(ary[:, :, 0], "x", dims=[])
+    assert "chain" in da1.dims
+    assert "draw" in da1.dims
+    assert da1.shape == (4, 10)
+    with rc_context(rc={"data.sample_dims": ["chain", "draw", "pred_id"]}):
+        da2 = ndarray_to_dataarray(ary, "x", dims=[])
+        assert "chain" in da2.dims
+        assert "draw" in da2.dims
+        assert "pred_id" in da2.dims
+        assert da2.shape == (4, 10, 3)
+        assert_allclose(da1, da2.sel(pred_id=0, drop=True))

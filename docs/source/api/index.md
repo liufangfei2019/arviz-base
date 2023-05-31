@@ -43,4 +43,5 @@
    arviz_base.dict_to_dataset
    arviz_base.generate_dims_coords
    arviz_base.make_attrs
+   arviz_base.ndarray_to_dataarray
 ```

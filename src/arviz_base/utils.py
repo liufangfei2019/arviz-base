@@ -14,18 +14,17 @@ def _var_names(var_names, data, filter_vars=None):
 
     Parameters
     ----------
-    var_names: str, list, or None
-    data : xarray.Dataset
-        Posterior data in an xarray
-    filter_vars: {None, "like", "regex"}, optional, default=None
+    var_names : str, list, or None
+    data : xarray.Dataset or sequence of xarray.Dataset
+    filter_vars : {None, "like", "regex"}, optional, default=None
         If `None` (default), interpret var_names as the real variables names. If "like",
-         interpret var_names as substrings of the real variables names. If "regex",
-         interpret var_names as regular expressions on the real variables names. A la
+        interpret var_names as substrings of the real variables names. If "regex",
+        interpret var_names as regular expressions on the real variables names. A la
         `pandas.filter`.
 
     Returns
     -------
-    var_name: list or None
+    var_name : list or None
     """
     if filter_vars not in {None, "like", "regex"}:
         raise ValueError(

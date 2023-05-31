@@ -197,14 +197,14 @@ def extract(
     keep_dataset=False,
     rng=None,
 ):
-    """Extract an InferenceData group or subset of it.
+    """Extract a group or group subset from a DataTree.
 
     Parameters
     ----------
-    idata : InferenceData or InferenceData_like
-        InferenceData from which to extract the data.
+    idata : DataTree_like
+        DataTree from which to extract the data.
     group : str, optional
-        Which InferenceData data group to extract data from.
+        Which group to extract data from.
     combined : bool, optional
         Combine `sample_dims` dimensions into ``sample``. Won't work if
         a dimension named ``sample`` already exists.
@@ -272,6 +272,8 @@ def extract(
         if len(var_names) == 1 and not keep_dataset:
             var_names = var_names[0]
         data = data[var_names]
+    elif len(data.data_vars) == 1:
+        data = data[list(data.data_vars)[0]]
     if combined:
         if sample_dims is None:
             sample_dims = rcParams["data.sample_dims"]

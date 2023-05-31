@@ -141,6 +141,77 @@ def generate_dims_coords(
     return dims, coords
 
 
+def ndarray_to_dataarray(
+    ary,
+    var_name,
+    *,
+    dims=None,
+    sample_dims=None,
+    coords=None,
+    index_origin=None,
+    skip_event_dims=False,
+    check_conventions=True,
+):
+    """Convert a numpy array to an xarray.DataArray.
+
+    The conversion considers some ArviZ conventions and adds extra
+    attributes, so it is similar to initializing an :class:`xarray.DataArray`
+    but not equivalent.
+
+    Parameters
+    ----------
+    ary : array_like
+        Values for the DataArray object to be created.
+    var_name : hashable
+        Name of the created DataArray object.
+    dims : iterable of hashable, optional
+        Dimensions of the DataArray.
+    coords : dict of {hashable: array_like}, optional
+        Coordinates for the dataarray
+    sample_dims : iterable of hashable, optional
+        Dimensions that should be assumed to be present.
+        If missing, they will be added as the dimensions corresponding to the
+        leading axes.
+    index_origin : int, optional
+        Passed to :func:`generate_dims_coords`
+    skip_event_dims : bool, optional
+        Passed to :func:`generate_dims_coords`
+    check_conventions : bool, optional
+        Check ArviZ conventions. Per the ArviZ schema, some dimension names
+        have specific meaning and there might be inconsistencies caught here
+        in the dimension naming step.
+
+    Returns
+    -------
+    DataArray
+
+    See Also
+    --------
+    dict_to_dataset
+    """
+    if dims is None:
+        dims = []
+
+    if sample_dims is None:
+        sample_dims = rcParams["data.sample_dims"]
+
+    if sample_dims:
+        var_dims = [sample_dim for sample_dim in sample_dims if sample_dim not in dims]
+        var_dims.extend(dims)
+    else:
+        var_dims = dims
+    var_dims, var_coords = generate_dims_coords(
+        ary.shape if hasattr(ary, "shape") else (),
+        var_name=var_name,
+        dims=var_dims,
+        coords=coords,
+        index_origin=index_origin,
+        skip_event_dims=skip_event_dims,
+        check_conventions=check_conventions,
+    )
+    return xr.DataArray(ary, coords=var_coords, dims=var_dims)
+
+
 def dict_to_dataset(
     data: DictData,
     *,
@@ -184,7 +255,7 @@ def dict_to_dataset(
     sample_dims : iterable of hashable, optional
         Dimensions that should be assumed to be present in _all_ variables.
         If missing, they will be added as the dimensions corresponding to the
-        leading axis.
+        leading axes.
     index_origin : int, optional
         Passed to :func:`generate_dims_coords`
     skip_event_dims : bool, optional
@@ -200,6 +271,7 @@ def dict_to_dataset(
 
     See Also
     --------
+    ndarray_to_dataarray
     convert_to_dataset
         General conversion to `xarray.Dataset` via :func:`convert_to_datatree`
 
@@ -235,27 +307,19 @@ def dict_to_dataset(
     if dims is None:
         dims = {}
 
-    if sample_dims is None:
-        sample_dims = rcParams["data.sample_dims"]
-
-    data_vars = {}
-    for var_name, values in data.items():
-        if sample_dims:
-            in_dims = dims.get(var_name, [])
-            var_dims = [sample_dim for sample_dim in sample_dims if sample_dim not in in_dims]
-            var_dims.extend(in_dims)
-        else:
-            var_dims = dims.get(var_name, [])
-        var_dims, var_coords = generate_dims_coords(
-            values.shape if hasattr(values, "shape") else (),
+    data_vars = {
+        var_name: ndarray_to_dataarray(
+            values,
             var_name=var_name,
-            dims=var_dims,
+            dims=dims.get(var_name, []),
+            sample_dims=sample_dims,
             coords=coords,
             index_origin=index_origin,
             skip_event_dims=skip_event_dims,
             check_conventions=check_conventions,
         )
-        data_vars[var_name] = xr.DataArray(values, coords=var_coords, dims=var_dims)
+        for var_name, values in data.items()
+    }
 
     return xr.Dataset(
         data_vars=data_vars, attrs=make_attrs(attrs=attrs, inference_library=inference_library)
