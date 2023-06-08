@@ -191,7 +191,11 @@ def test_dict_to_dataset_with_tuple_coord():
 
 @pytest.mark.parametrize(
     "args",
-    [(["chain", "draw"], (4, 10)), (["sample"], (10,)), (["chain", "draw", "pred_id"], (4, 10, 3))],
+    [
+        (["chain", "draw"], (4, 10)),
+        (["sample"], (10,)),
+        (["chain", "draw", "pred_id"], (4, 10, 3)),
+    ],
 )
 def test_ndarray_to_dataarray(args):
     dims, shape = args
@@ -200,3 +204,14 @@ def test_ndarray_to_dataarray(args):
     with_dims = ndarray_to_dataarray(ary, "x", dims=dims, sample_dims=[])
     with_sample_dims = ndarray_to_dataarray(ary, "x", dims=[], sample_dims=dims)
     assert_allclose(with_sample_dims, with_dims)
+
+
+@pytest.mark.parametrize("mode", ["scalar", "0d array"])
+def test_ndarray_to_dataarray_scalar(mode):
+    if mode == "scalar":
+        ary = 2
+    else:
+        ary = np.array(2)
+    da = ndarray_to_dataarray(ary, "x", dims=[], sample_dims=[])
+    assert not da.dims
+    assert da.item() == 2
