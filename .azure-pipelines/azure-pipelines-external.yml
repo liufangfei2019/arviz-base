@@ -49,7 +49,7 @@ jobs:
       fi
 
       python -m pip --no-cache-dir install emcee>=3 h5py
-      python -m pip --no-cache-dir install pystan>=3 beanmachine pyro-ppl>=1 numpyro pyjags
+      python -m pip --no-cache-dir install pystan>=3 beanmachine pyro-ppl>=1 numpyro pyjags "torch<2"
 
     displayName: 'Install external dependencies'
 
