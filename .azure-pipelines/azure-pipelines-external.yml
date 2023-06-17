@@ -63,7 +63,7 @@ jobs:
     displayName: 'Print packages'
 
   - script: |
-      python -m pylint src/arviz-base tests
+      python -m pylint src/arviz_base tests external_tests
     displayName: 'pylint'
 
   - script: |
