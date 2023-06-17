@@ -67,7 +67,7 @@ jobs:
     displayName: 'pylint'
 
   - script: |
-      pre-commit run --all
+      SKIP=pylint pre-commit run --all
     displayName: 'pre-commit'
 
   - script: |

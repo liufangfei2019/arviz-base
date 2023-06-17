@@ -49,6 +49,7 @@ test = [
 ci = [
     "pylint",
     "pre-commit",
+    "cloudpickle"
 ]
 doc = [
     "furo",
