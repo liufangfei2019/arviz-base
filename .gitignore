@@ -72,6 +72,10 @@ coverage.xml
 .pytest_cache/
 cover/
 
+# auxiliary test files
+external_tests/saved_models/*.pkl.gzip
+external_tests/saved_models/*.h5
+
 # Translations
 *.mo
 *.pot

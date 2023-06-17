@@ -15,6 +15,7 @@ from packaging.version import Version
 
 _log = logging.getLogger(__name__)
 
+
 @pytest.fixture(scope="module")
 def draws():
     """Share default draw count."""
@@ -77,9 +78,7 @@ def emcee_schools_model(data, draws, chains):
     backend = emcee.backends.HDFBackend(filepath)  # pylint: disable=no-member
     backend.reset(chains, ndim)
     # pylint: disable=unexpected-keyword-arg
-    sampler = emcee.EnsembleSampler(
-        chains, ndim, _emcee_lnprob, args=(y, sigma), backend=backend
-    )
+    sampler = emcee.EnsembleSampler(chains, ndim, _emcee_lnprob, args=(y, sigma), backend=backend)
     # pylint: enable=unexpected-keyword-arg
     sampler.run_mcmc(pos, draws, store=True)
     return sampler
@@ -193,9 +192,7 @@ def pystan_noncentered_schools(data, draws, chains):
     import stan  # pylint: disable=import-error
 
     stan_model = stan.build(schools_code, data=data)
-    fit = stan_model.sample(
-        num_chains=chains, num_samples=draws, num_warmup=500, save_warmup=True
-    )
+    fit = stan_model.sample(num_chains=chains, num_samples=draws, num_warmup=500, save_warmup=True)
     return stan_model, fit
 
 

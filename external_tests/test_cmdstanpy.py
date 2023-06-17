@@ -1,6 +1,5 @@
 # pylint: disable=redefined-outer-name, no-self-use
 import os
-import tempfile
 from glob import glob
 
 import numpy as np
@@ -18,7 +17,7 @@ from .helpers import (  # pylint: disable=unused-import
 )
 
 
-def _create_test_data():
+def _create_test_data(target_dir):
     """Create test data to local folder.
 
     This function is needed when test data needs to be updated.
@@ -69,7 +68,7 @@ def _create_test_data():
     """
     stan_file = "stan_test_data.stan"
     with open(stan_file, "w", encoding="utf8") as file_handle:
-        print(model_code, file=file_handle)
+        file_handle.write(model_code)
     model = cmdstanpy.CmdStanModel(stan_file=stan_file)
     os.remove(stan_file)
     stan_data = {
@@ -80,7 +79,7 @@ def _create_test_data():
     fit_no_warmup = model.sample(
         data=stan_data, iter_sampling=100, iter_warmup=1000, save_warmup=False
     )
-    fit_no_warmup.save_csvfiles(dir=".")
+    fit_no_warmup.save_csvfiles(dir=target_dir)
     fit_files = {
         "cmdstanpy_eight_schools_nowarmup": [],
         "cmdstanpy_eight_schools_warmup": [],
@@ -92,7 +91,7 @@ def _create_test_data():
         shutil.move(path, new_path)
         fit_files["cmdstanpy_eight_schools_nowarmup"].append(new_path)
     fit_warmup = model.sample(data=stan_data, iter_sampling=100, iter_warmup=500, save_warmup=True)
-    fit_warmup.save_csvfiles(dir=".")
+    fit_warmup.save_csvfiles(dir=target_dir)
     for path in fit_no_warmup.runset.csv_files:
         path = Path(path)
         _, num = path.stem.rsplit("-", 1)
@@ -109,27 +108,26 @@ class TestDataCmdStanPy:
     @pytest.fixture(scope="session")
     def data_directory(self):
         here = os.path.dirname(os.path.abspath(__file__))
-        data_directory = os.path.join(here, "saved_models")
+        data_directory = os.path.join(here, "saved_models", "cmdstanpy")
+        if not os.path.isdir(data_directory):
+            os.makedirs(data_directory)
+            _create_test_data(data_directory)
         return data_directory
 
     @pytest.fixture(scope="class")
     def filepaths(self, data_directory):
         files = {
             "nowarmup": glob(
-                os.path.join(
-                    data_directory, "cmdstanpy", "cmdstanpy_eight_schools_nowarmup-[1-4].csv"
-                )
+                os.path.join(data_directory, "cmdstanpy_eight_schools_nowarmup-*_[1-4].csv")
             ),
             "warmup": glob(
-                os.path.join(
-                    data_directory, "cmdstanpy", "cmdstanpy_eight_schools_warmup-[1-4].csv"
-                )
+                os.path.join(data_directory, "cmdstanpy_eight_schools_warmup-*_[1-4].csv")
             ),
         }
         return files
 
     @pytest.fixture(scope="class")
-    def data(self, filepaths):
+    def data(self, filepaths, data_directory):
         # Skip tests if cmdstanpy not installed
         cmdstanpy = importorskip("cmdstanpy")
         CmdStanModel = cmdstanpy.CmdStanModel  # pylint: disable=invalid-name
@@ -161,12 +159,8 @@ class TestDataCmdStanPy:
             obj_warmup = CmdStanMCMC(runset_obj_warmup)
             obj_warmup._assemble_draws()  # pylint: disable=protected-access
 
-            _model_code = """model { real y; } generated quantities { int eta; int theta[N]; }"""
-            with tempfile.TemporaryDirectory(prefix="arviz_tests_") as _tmp_dir:
-                _stan_file = os.path.join(_tmp_dir.name, "stan_model_test.stan")
-                with open(_stan_file, "w", encoding="utf8") as f:
-                    f.write(_model_code)
-                model = CmdStanModel(stan_file=_stan_file, compile=False)
+            stan_file = os.path.join(data_directory, "stan_model_test.stan")
+            model = CmdStanModel(stan_file=stan_file, compile=False)
 
         return Data
 
@@ -336,7 +330,6 @@ class TestDataCmdStanPy:
             save_warmup=False,
         )
 
-    @pytest.mark.skip(reason="need to check and update csv files")
     def test_sampler_stats(self, data, eight_schools_params):
         inference_data = self.get_inference_data(data, eight_schools_params)
         test_dict = {"sample_stats": ["lp", "diverging"]}
@@ -344,7 +337,6 @@ class TestDataCmdStanPy:
         assert not fails
         assert len(inference_data.sample_stats.lp.shape) == 2  # pylint: disable=no-member
 
-    @pytest.mark.skip(reason="need to check and update csv files")
     def test_inference_data(self, data, eight_schools_params):
         inference_data1 = self.get_inference_data(data, eight_schools_params)
         inference_data2 = self.get_inference_data2(data, eight_schools_params)
@@ -418,7 +410,7 @@ class TestDataCmdStanPy:
         assert inference_data5.posterior.eta.dtype.kind == "i"  # pylint: disable=no-member
         assert inference_data5.posterior.theta.dtype.kind == "i"  # pylint: disable=no-member
 
-    @pytest.mark.skip(reason="need to check and update csv files")
+    # @pytest.mark.skip(reason="need to check and update csv files")
     def test_inference_data_warmup(self, data, eight_schools_params):
         inference_data_true_is_true = self.get_inference_data_warmup_true_is_true(
             data, eight_schools_params

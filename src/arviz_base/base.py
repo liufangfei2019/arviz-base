@@ -1,6 +1,7 @@
 """ArviZ basic functions and converters."""
 import datetime
 import importlib
+import re
 import warnings
 from collections.abc import Hashable, Mapping
 from copy import deepcopy

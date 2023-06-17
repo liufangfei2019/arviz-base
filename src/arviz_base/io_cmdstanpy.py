@@ -6,8 +6,8 @@ from pathlib import Path
 import numpy as np
 from datatree import DataTree
 
-from .rcparams import rcParams
 from .base import dict_to_dataset, infer_stan_dtypes, requires
+from .rcparams import rcParams
 
 _log = logging.getLogger(__name__)
 
@@ -132,7 +132,6 @@ class CmdStanPyConverter:
         )
 
         return self._warmup_return_to_dict(data, data_warmup, "posterior")
-
 
     @requires("posterior")
     def sample_stats_to_xarray(self):
@@ -303,18 +302,23 @@ class CmdStanPyConverter:
         will not have those groups.
         """
         datadict = {
-            **self.posterior_to_xarray(),
-            **self.sample_stats_to_xarray(),
-            **self.posterior_predictive_to_xarray(),
-            **self.predictions_to_xarray(),
-            **self.prior_to_xarray(),
-            **self.sample_stats_prior_to_xarray(),
-            **self.prior_predictive_to_xarray(),
             "observed_data": self.observed_data_to_xarray(),
             "constant_data": self.constant_data_to_xarray(),
             "predictions_constant_data": self.predictions_constant_data_to_xarray(),
-            **self.log_likelihood_to_xarray(),
         }
+        datalist = [
+            self.posterior_to_xarray(),
+            self.sample_stats_to_xarray(),
+            self.posterior_predictive_to_xarray(),
+            self.predictions_to_xarray(),
+            self.prior_to_xarray(),
+            self.sample_stats_prior_to_xarray(),
+            self.prior_predictive_to_xarray(),
+            self.log_likelihood_to_xarray(),
+        ]
+        for ds_dict in datalist:
+            if ds_dict is not None:
+                datadict.update(ds_dict)
         return DataTree.from_dict({group: ds for group, ds in datadict.items() if ds is not None})
 
 
