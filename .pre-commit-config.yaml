@@ -25,6 +25,17 @@ repos:
       files: ^src/arviz_base/.+\.py$
       exclude: ^src/arviz_base/example_data/
 
+- repo: https://github.com/MarcoGorelli/absolufy-imports
+  rev: v0.3.1
+  hooks:
+    - id: absolufy-imports
+      args: ["--never", "--application-directories src"]
+
+- repo: https://github.com/MarcoGorelli/madforhooks
+  rev: 0.4.1
+  hooks:
+    - id: no-print-statements
+
 - repo: local
   hooks:
     - id: pylint
@@ -37,3 +48,6 @@ repos:
           "-rn", # Only display messages
           "-sn", # Don't display the score
         ]
+      exclude: >
+          (?x)(src/arviz_base/io_cmdstanpy.py|
+               src/arviz_base/io_emcee.py)

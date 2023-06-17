@@ -1,0 +1,96 @@
+jobs:
+- job: ExternalTests
+  pool:
+    vmImage: 'ubuntu-22.04'
+  variables:
+    - name: NUMBA_DISABLE_JIT
+      value: 1
+    - name: ARVIZ_CI_MACHINE
+      value: 1
+  timeoutInMinutes: 360
+  strategy:
+    matrix:
+      Python_310_Latest:
+        python.version: "3.10"
+        cmdstanpy.version: "latest"
+        name: "External latest"
+
+      Python_310_Special_versions:
+        python.version: "3.10"
+        cmdstanpy.version: "github"
+        name: "External special"
+
+  steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '$(python.version)'
+    displayName: 'Use Python $(python.version): $(name)'
+
+  - script: |
+      ls
+      env
+      pwd
+      gcc --version
+      python --version
+    displayName: 'Debug information'
+
+  - script: |
+      sudo apt-get update
+      sudo apt-get install jags
+      python -m pip install --upgrade pip
+      python -m pip install wheel
+
+      python -m pip --no-cache-dir install torch<2.0 --index-url https://download.pytorch.org/whl/cpu
+
+      if [ "$(cmdstanpy.version)" = "latest" ]; then
+          python -m pip --no-cache-dir install cmdstanpy
+      else
+          python -m pip --no-cache-dir install git+https://github.com/stan-dev/cmdstanpy@develop#egg=cmdstanpy
+      fi
+
+      python -m pip --no-cache-dir install emcee>=3 h5py
+      python -m pip --no-cache-dir install pystan>=3 beanmachine pyro-ppl>=1 numpyro pyjags
+
+    displayName: 'Install external dependencies'
+
+  - script: |
+      python -m pip install pytest-azurepipelines
+      python -m pip install ".[test,h5netcdf,ci]"
+    displayName: 'Install arviz-base and requirements'
+
+  - script: |
+      python -m pip freeze
+    displayName: 'Print packages'
+
+  - script: |
+      python -m pylint src/arviz-base tests
+    displayName: 'pylint'
+
+  - script: |
+      pre-commit run --all
+    displayName: 'pre-commit'
+
+  - script: |
+      pytest external_tests/helpers.py
+    displayName: 'precompile models'
+
+  - script: |
+      python -m pytest external_tests --cov --cov-report=xml
+    displayName: 'pytest'
+
+  - task: PublishTestResults@2
+    condition: succeededOrFailed()
+    inputs:
+      testResultsFiles: '$(System.DefaultWorkingDirectory)/test-*.xml'
+      testRunTitle: 'Publish test results for Python $(python.version)'
+
+  - script: |
+      curl https://keybase.io/codecovsecurity/pgp_keys.asc | gpg --no-default-keyring --keyring trustedkeys.gpg --import # One-time step
+      curl -Os https://uploader.codecov.io/latest/linux/codecov
+      curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM
+      curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM.sig
+      gpgv codecov.SHA256SUM.sig codecov.SHA256SUM
+      shasum -a 256 -c codecov.SHA256SUM
+      chmod +x codecov
+      ./codecov -n "$(NAME)"
+    displayName: 'upload coverage'

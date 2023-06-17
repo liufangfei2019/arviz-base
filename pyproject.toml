@@ -46,6 +46,10 @@ test = [
     "pytest",
     "pytest-cov",
 ]
+ci = [
+    "pylint",
+    "pre-commit",
+]
 doc = [
     "furo",
     "myst-parser[linkify]",
