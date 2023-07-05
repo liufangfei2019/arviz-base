@@ -10,7 +10,9 @@ pip install arviz-base @ git+https://github.com/arviz-devs/arviz-base
 ```
 
 Note that `arviz-base` is a minimal package, which only depends on
-xarray (and xarray-datatree), numpy and typing-extensions.
+xarray (and xarray-datatree which will at some point be merged into xarray),
+NumPy and typing-extensions.
+
 Everything else (netcdf, zarr, dask...) are optional dependencies.
 This allows installing only those that are needed, e.g. if you
 only plan to use zarr, there is no need to install netcdf.
@@ -33,17 +35,29 @@ where `<option>` can be one of:
 You can install multiple bundles of optional dependencies separating them with commas.
 Thus, to install all user facing optional dependencies you should use `xarray-einstats[einops,numba]`
 
-```{toctree}
+:::{toctree}
+:hidden:
+
+tutorial/WorkingWithDataTree
+:::
+
+:::{toctree}
+:hidden:
+
+how_to/ConversionGuideEmcee
+:::
+
+:::{toctree}
 :hidden:
 
 api/index
-```
+:::
 
-```{toctree}
+:::{toctree}
 :caption: About
 :hidden:
 
 Twitter <https://twitter.com/arviz_devs>
 Mastodon <https://bayes.club/@ArviZ>
 GitHub repository <https://github.com/arviz-devs/xarray-einstats>
-```
+:::

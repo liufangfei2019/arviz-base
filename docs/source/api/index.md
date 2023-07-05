@@ -11,6 +11,28 @@
    arviz_base.from_dict
 ```
 
+## Library specific converters
+
+```{eval-rst}
+.. autosummary::
+   :toctree: generated/
+
+   arviz_base.from_cmdstanpy
+   arviz_base.from_emcee
+```
+
+More coming soon...
+
+## Iteration and subsetting
+
+```{eval-rst}
+.. autosummary::
+   :toctree: generated/
+
+   arviz_base.xarray_sel_iter
+   arviz_base.xarray_var_iter
+```
+
 
 ## Example datasets
 

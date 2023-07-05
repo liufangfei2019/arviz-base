@@ -410,7 +410,6 @@ class TestDataCmdStanPy:
         assert inference_data5.posterior.eta.dtype.kind == "i"  # pylint: disable=no-member
         assert inference_data5.posterior.theta.dtype.kind == "i"  # pylint: disable=no-member
 
-    # @pytest.mark.skip(reason="need to check and update csv files")
     def test_inference_data_warmup(self, data, eight_schools_params):
         inference_data_true_is_true = self.get_inference_data_warmup_true_is_true(
             data, eight_schools_params
