@@ -52,16 +52,20 @@ def xarray_sel_iter(
     reverse_selections : bool
         Whether to reverse selections before iterating.
 
-    Returns
-    -------
-    iterator of (str, dict of {hashable : any}, dict of {hashable : any})
-        Within each tuple of the iterator, the string is the variable name,
-        the first dictionary are coordinate names to coordinate values,
-        and the second are dimension names to positional indexes.
+    Yields
+    ------
+    var_name : str
+        Variable name to which `selection` and `iselection` correspond to.
+    selection : dict of {hashable : any}
+        Keys are coordinate names and values are scalar coordinate values.
         To get the values of the variable at these coordinates, do
-        ``data[var_name].sel(selection)`` or ``data[var_name].isel(selection)``
-        for :class:`~xarray.Dataset`; for :class:`~xarray.DataArray` do
-        ``data.sel(selection)`` or the ``isel`` equivalent.
+        ``data[var_name].sel(selection)`` for :class:`~xarray.Dataset` or
+        ``data.sel(selection)`` for :class:`~xarray.DataArray`.
+    iselection : dict of {hashable : any}
+        Keys are dimension names and values are positional indexes (might not be scalars).
+        To get the values of the variable at these coordinates, do
+        ``data[var_name].isel(iselection)`` for :class:`~xarray.Dataset` or
+        ``data.isel(iselection)`` for :class:`~xarray.DataArray`.
 
     Examples
     --------
@@ -220,12 +224,16 @@ def xarray_var_iter(
     dim_order: list, optional
         Order for the first dimensions. Skips dimensions not found in the variable.
 
-    Returns
-    -------
-    iterator of (str, dict, dict, DataArray)
-        The string is the variable name, the 1st dictionary are coordinate names to values,
-        the 2nd dictionary are dimension names to positions
-        and the ``DataArray`` are the values of the variable at those coordinates.
+    Yields
+    ------
+    var_name : str
+        Variable name to which `selection`, `iselection` and `data_subset` correspond to.
+    selection : dict of {hashable : any}
+        Keys are coordinate names and values are scalar coordinate values.
+    iselection : dict of {hashable : any}
+        Keys are dimension names and values are positional indexes (might not be scalars).
+    data_subset : DataArray)
+        Values of the variable at those coordinates.
 
     See Also
     --------

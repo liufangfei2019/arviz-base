@@ -78,6 +78,9 @@ numpydoc_xref_aliases = {
     "Dataset": ":class:`xarray.Dataset`",
     "DataTree": ":class:`datatree.DataTree`",
     **{f"{singular}s": f":any:`{singular}s <{singular}>`" for singular in singulars},
+    "iterator": ":term:`python:iterator`",
+    "mapping": ":term:`python:mapping`",
+    "hashable": ":term:`python:hashable`",
 }
 
 intersphinx_mapping = {
