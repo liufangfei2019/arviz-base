@@ -262,6 +262,7 @@ defaultParams = {  # pylint: disable=invalid-name
         lambda x: x,
     ),
     "plot.matplotlib.show": (False, _validate_boolean),
+    "stats.ci_kind": ("eti", _make_validate_choice({"eti", "hdi"})),
     "stats.ci_prob": (0.83, _validate_probability),
     "stats.information_criterion": (
         "loo",
