@@ -190,7 +190,7 @@ def xarray_sel_iter(
 def xarray_var_iter(
     data,
     var_names=None,
-    combined=False,
+    combined=None,
     skip_dims=None,
     dim_to_idx=None,
     reverse_selections=False,
