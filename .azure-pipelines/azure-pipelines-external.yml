@@ -40,7 +40,7 @@ jobs:
       python -m pip install --upgrade pip
       python -m pip install wheel
 
-      python -m pip --no-cache-dir install torch<2.0 --index-url https://download.pytorch.org/whl/cpu
+      python -m pip --no-cache-dir install torch --index-url https://download.pytorch.org/whl/cpu
 
       if [ "$(cmdstanpy.version)" = "latest" ]; then
           python -m pip --no-cache-dir install cmdstanpy
@@ -49,7 +49,7 @@ jobs:
       fi
 
       python -m pip --no-cache-dir install emcee>=3 h5py
-      python -m pip --no-cache-dir install pystan>=3 beanmachine pyro-ppl>=1 numpyro pyjags "torch<2"
+      python -m pip --no-cache-dir install pystan>=3 pyro-ppl>=1 numpyro pyjags
 
     displayName: 'Install external dependencies'
 
@@ -61,10 +61,6 @@ jobs:
   - script: |
       python -m pip freeze
     displayName: 'Print packages'
-
-  - script: |
-      python -m pylint src/arviz_base tests external_tests
-    displayName: 'pylint'
 
   - script: |
       SKIP=pylint pre-commit run --all
