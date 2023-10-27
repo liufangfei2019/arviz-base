@@ -6,9 +6,6 @@ from urllib.parse import urlunsplit
 
 import numpy as np
 import pytest
-from datatree import DataTree
-from xarray.testing import assert_allclose
-
 from arviz_base import (
     dict_to_dataset,
     generate_dims_coords,
@@ -18,8 +15,8 @@ from arviz_base import (
     ndarray_to_dataarray,
 )
 from arviz_base.datasets import LOCAL_DATASETS, REMOTE_DATASETS, RemoteFileMetadata, clear_data_home
-
-from .helpers import centered_eight, chains, draws  # pylint: disable=unused-import
+from datatree import DataTree
+from xarray.testing import assert_allclose
 
 
 @pytest.fixture(autouse=True)

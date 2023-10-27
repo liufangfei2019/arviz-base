@@ -3,16 +3,12 @@ import os
 
 import numpy as np
 import pytest
-
 from arviz_base import from_emcee
 from arviz_base.testing import check_multiple_attrs
 
 from .helpers import _emcee_lnprior as emcee_lnprior
 from .helpers import _emcee_lnprob as emcee_lnprob
 from .helpers import (  # pylint: disable=unused-import
-    chains,
-    draws,
-    eight_schools_params,
     importorskip,
     load_cached_models,
 )

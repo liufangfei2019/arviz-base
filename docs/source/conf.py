@@ -1,4 +1,5 @@
 # pylint: disable=redefined-builtin,invalid-name
+"""Sphinx configuration file."""
 import os
 from importlib.metadata import metadata
 

@@ -2,7 +2,6 @@
 import numpy as np
 import pytest
 import xarray as xr
-
 from arviz_base import dict_to_dataset, xarray_sel_iter, xarray_to_ndarray
 
 

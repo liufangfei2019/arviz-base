@@ -4,16 +4,11 @@ from glob import glob
 
 import numpy as np
 import pytest
-
 from arviz_base import from_cmdstanpy
 from arviz_base.testing import check_multiple_attrs
 
 from .helpers import (  # pylint: disable=unused-import
-    chains,
-    draws,
-    eight_schools_params,
     importorskip,
-    load_cached_models,
 )
 
 
@@ -84,16 +79,16 @@ def _create_test_data(target_dir):
         "cmdstanpy_eight_schools_nowarmup": [],
         "cmdstanpy_eight_schools_warmup": [],
     }
-    for path in fit_no_warmup.runset.csv_files:
-        path = Path(path)
+    for path_i in fit_no_warmup.runset.csv_files:
+        path = Path(path_i)
         _, num = path.stem.rsplit("-", 1)
         new_path = path.parent / ("cmdstanpy_eight_schools_nowarmup-" + num + path.suffix)
         shutil.move(path, new_path)
         fit_files["cmdstanpy_eight_schools_nowarmup"].append(new_path)
     fit_warmup = model.sample(data=stan_data, iter_sampling=100, iter_warmup=500, save_warmup=True)
     fit_warmup.save_csvfiles(dir=target_dir)
-    for path in fit_no_warmup.runset.csv_files:
-        path = Path(path)
+    for path_i in fit_no_warmup.runset.csv_files:
+        path = Path(path_i)
         _, num = path.stem.rsplit("-", 1)
         new_path = path.parent / ("cmdstanpy_eight_schools_warmup-" + num + path.suffix)
         shutil.move(path, new_path)

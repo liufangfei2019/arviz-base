@@ -21,7 +21,7 @@ RemoteFileMetadata = namedtuple(
 _EXAMPLE_DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "example_data")
 _LOCAL_DATA_DIR = os.path.join(_EXAMPLE_DATA_DIR, "data")
 
-with open(os.path.join(_EXAMPLE_DATA_DIR, "data_local.json"), "r", encoding="utf-8") as f:
+with open(os.path.join(_EXAMPLE_DATA_DIR, "data_local.json"), encoding="utf-8") as f:
     LOCAL_DATASETS = {
         entry["name"]: LocalFileMetadata(
             name=entry["name"],
@@ -31,7 +31,7 @@ with open(os.path.join(_EXAMPLE_DATA_DIR, "data_local.json"), "r", encoding="utf
         for entry in json.load(f)
     }
 
-with open(os.path.join(_EXAMPLE_DATA_DIR, "data_remote.json"), "r", encoding="utf-8") as f:
+with open(os.path.join(_EXAMPLE_DATA_DIR, "data_remote.json"), encoding="utf-8") as f:
     REMOTE_DATASETS = {entry["name"]: RemoteFileMetadata(**entry) for entry in json.load(f)}
 
 
@@ -131,7 +131,7 @@ def load_arviz_data(dataset=None, data_home=None, **kwargs):
 
         checksum = _sha256(file_path)
         if remote.checksum != checksum:
-            raise IOError(
+            raise OSError(
                 f"{file_path} has an SHA256 checksum ({checksum}) differing from expected "
                 "({remote.checksum}), file may be corrupted. "
                 "Run `arviz.clear_data_home()` and try again, or please open an issue."

@@ -7,7 +7,7 @@ import re
 import sys
 from collections.abc import MutableMapping
 from pathlib import Path
-from typing import Any, Dict, Literal
+from typing import Any, Literal
 
 import numpy as np
 from typing_extensions import get_args
@@ -300,7 +300,7 @@ class RcParams(MutableMapping):
 
     # validate values on the way in
     def __init__(self, *args, **kwargs):
-        self._underlying_storage: Dict[str, Any] = {}
+        self._underlying_storage: dict[str, Any] = {}
         super().__init__()
         self.update(*args, **kwargs)
 
@@ -447,7 +447,7 @@ def read_rcfile(fname):
     _error_details_fmt = 'line #%d\n\t"%s"\n\tin file "%s"'
 
     config = RcParams()
-    with open(fname, "r", encoding="utf8") as rcfile:
+    with open(fname, encoding="utf8") as rcfile:
         try:
             for line_no, line in enumerate(rcfile, 1):
                 strippedline = line.split("#", 1)[0].strip()

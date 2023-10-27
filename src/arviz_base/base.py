@@ -3,9 +3,9 @@ import datetime
 import importlib
 import re
 import warnings
-from collections.abc import Hashable, Mapping
+from collections.abc import Hashable, Iterable, Mapping
 from copy import deepcopy
-from typing import TYPE_CHECKING, Any, Callable, Iterable, List, Optional, Tuple, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Callable, Optional, TypeVar, Union
 
 import numpy as np
 import xarray as xr
@@ -15,7 +15,7 @@ from .rcparams import rcParams
 from .types import CoordSpec, DictData, DimSpec
 
 if TYPE_CHECKING:
-    from numpy.typing import ArrayLike
+    pass
 
 RequiresArgTypeT = TypeVar("RequiresArgTypeT")
 RequiresReturnTypeT = TypeVar("RequiresReturnTypeT")
@@ -29,7 +29,7 @@ def generate_dims_coords(
     index_origin: Optional[int] = None,
     skip_event_dims: bool = False,
     check_conventions: bool = True,
-) -> Tuple[List[Hashable], CoordSpec]:
+) -> tuple[list[Hashable], CoordSpec]:
     """Generate default dimensions and coordinates for a variable.
 
     Parameters
@@ -377,8 +377,8 @@ class requires:  # pylint: disable=invalid-name
     See https://github.com/arviz-devs/arviz/pull/1504 for more discussion.
     """
 
-    def __init__(self, *props: Union[str, List[str]]) -> None:
-        self.props: Tuple[Union[str, List[str]], ...] = props
+    def __init__(self, *props: Union[str, list[str]]) -> None:
+        self.props: tuple[Union[str, list[str]], ...] = props
 
     def __call__(
         self, func: Callable[[RequiresArgTypeT], RequiresReturnTypeT]
@@ -388,8 +388,8 @@ class requires:  # pylint: disable=invalid-name
         def wrapped(cls: RequiresArgTypeT) -> Optional[RequiresReturnTypeT]:
             """Return None if not all props are available."""
             for prop in self.props:
-                prop = [prop] if isinstance(prop, str) else prop
-                if all((getattr(cls, prop_i) is None for prop_i in prop)):
+                prop_list = [prop] if isinstance(prop, str) else prop
+                if all(getattr(cls, prop_i) is None for prop_i in prop_list):
                     return None
             return func(cls)
 

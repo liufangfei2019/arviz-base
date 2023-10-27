@@ -3,10 +3,7 @@
 import numpy as np
 import pytest
 import xarray as xr
-
 from arviz_base import convert_to_dataset, convert_to_datatree, extract
-
-from .helpers import centered_eight, chains, draws  # pylint: disable=unused-import
 
 
 def test_1d_dataset():

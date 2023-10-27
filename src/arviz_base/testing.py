@@ -1,13 +1,13 @@
 """ArviZ testing utilities."""
 
-from typing import Dict, List, Tuple, Union
+from typing import Union
 
 from datatree import DataTree
 
 
 def check_multiple_attrs(
-    test_dict: Dict[str, List[str]], parent: DataTree
-) -> List[Union[str, Tuple[str, str]]]:
+    test_dict: dict[str, list[str]], parent: DataTree
+) -> list[Union[str, tuple[str, str]]]:
     """Perform multiple hasattr checks on InferenceData objects.
 
     It is thought to first check if the parent object contains a given dataset,
@@ -50,7 +50,7 @@ def check_multiple_attrs(
     in ``sample_stats``, also against what was expected.
 
     """
-    failed_attrs: List[Union[str, Tuple[str, str]]] = []
+    failed_attrs: list[Union[str, tuple[str, str]]] = []
     for dataset_name, attributes in test_dict.items():
         if dataset_name.startswith("~"):
             if hasattr(parent, dataset_name[1:]):
