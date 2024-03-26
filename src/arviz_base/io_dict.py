@@ -1,6 +1,5 @@
 """Dictionary specific conversion code."""
 import warnings
-from typing import Optional
 
 from datatree import DataTree
 
@@ -14,7 +13,7 @@ def from_dict(
     name=None,
     sample_dims=None,
     save_warmup=None,
-    index_origin: Optional[int] = None,
+    index_origin: int | None = None,
     coords=None,
     dims=None,
     pred_dims=None,

@@ -7,10 +7,9 @@ import re
 import sys
 from collections.abc import MutableMapping
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, get_args
 
 import numpy as np
-from typing_extensions import get_args
 
 _log = logging.getLogger("arviz")
 
@@ -203,7 +202,7 @@ def make_iterable_validator(scalar_validator, length=None, allow_none=False, all
             if allow_auto and value.lower() == "auto":
                 return "auto"
             value = tuple(v.strip("([ ])") for v in value.split(",") if v.strip())
-        if np.iterable(value) and not isinstance(value, (set, frozenset)):
+        if np.iterable(value) and not isinstance(value, set | frozenset):
             val = tuple(scalar_validator(v) for v in value)
             if length is not None and len(val) != length:
                 raise ValueError(f"Iterable must be of length: {length}")

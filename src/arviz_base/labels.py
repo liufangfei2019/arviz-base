@@ -1,6 +1,5 @@
 # pylint: disable=unused-argument
 """Utilities to generate labels from xarray objects."""
-from typing import Union
 
 __all__ = [
     "mix_labellers",
@@ -92,7 +91,7 @@ class BaseLabeller:
             )
         return ""
 
-    def var_name_to_str(self, var_name: Union[str, None]):  # pylint: disable=no-self-use
+    def var_name_to_str(self, var_name: str | None):  # pylint: disable=no-self-use
         """WIP."""
         return var_name
 
@@ -106,7 +105,7 @@ class BaseLabeller:
         """WIP."""
         return model_name
 
-    def make_label_vert(self, var_name: Union[str, None], sel: dict, isel: dict):
+    def make_label_vert(self, var_name: str | None, sel: dict, isel: dict):
         """WIP."""
         var_name_str = self.var_name_to_str(var_name)
         sel_str = self.sel_to_str(sel, isel)

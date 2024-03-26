@@ -32,7 +32,7 @@ def _var_names(var_names, data, filter_vars=None):
         )
 
     if var_names is not None:
-        if isinstance(data, (list, tuple)):
+        if isinstance(data, list | tuple):
             all_vars = []
             for dataset in data:
                 dataset_vars = list(dataset.data_vars)
@@ -156,7 +156,7 @@ def _get_coords(data, coords):
     data : Dataset or DataArray
         Return type is of the same type as the input
     """
-    if not isinstance(data, (list, tuple)):
+    if not isinstance(data, list | tuple):
         try:
             return data.sel(**coords)
 
@@ -170,7 +170,7 @@ def _get_coords(data, coords):
                 "Check that coords structure is correct and"
                 f" dimensions are valid. {err}"
             ) from err
-    if not isinstance(coords, (list, tuple)):
+    if not isinstance(coords, list | tuple):
         coords = [coords] * len(data)
     data_subset = []
     for idx, (datum, coords_dict) in enumerate(zip(data, coords)):

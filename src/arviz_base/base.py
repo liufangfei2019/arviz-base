@@ -3,9 +3,9 @@ import datetime
 import importlib
 import re
 import warnings
-from collections.abc import Hashable, Iterable, Mapping
+from collections.abc import Callable, Hashable, Iterable, Mapping
 from copy import deepcopy
-from typing import TYPE_CHECKING, Any, Callable, Optional, TypeVar, Union
+from typing import TYPE_CHECKING, Any, TypeVar
 
 import numpy as np
 import xarray as xr
@@ -24,9 +24,9 @@ RequiresReturnTypeT = TypeVar("RequiresReturnTypeT")
 def generate_dims_coords(
     shape: Iterable[int],
     var_name: Hashable,
-    dims: Optional[Iterable[Hashable]] = None,
-    coords: Optional[CoordSpec] = None,
-    index_origin: Optional[int] = None,
+    dims: Iterable[Hashable] | None = None,
+    coords: CoordSpec | None = None,
+    index_origin: int | None = None,
     skip_event_dims: bool = False,
     check_conventions: bool = True,
 ) -> tuple[list[Hashable], CoordSpec]:
@@ -216,12 +216,12 @@ def ndarray_to_dataarray(
 def dict_to_dataset(
     data: DictData,
     *,
-    attrs: Optional[Mapping[Any, Any]] = None,
-    inference_library: Optional[str] = None,
-    coords: Optional[CoordSpec] = None,
-    dims: Optional[DimSpec] = None,
-    sample_dims: Optional[Iterable[Hashable]] = None,
-    index_origin: Optional[int] = None,
+    attrs: Mapping[Any, Any] | None = None,
+    inference_library: str | None = None,
+    coords: CoordSpec | None = None,
+    dims: DimSpec | None = None,
+    sample_dims: Iterable[Hashable] | None = None,
+    index_origin: int | None = None,
     skip_event_dims: bool = False,
     check_conventions: bool = True,
 ):
@@ -377,15 +377,15 @@ class requires:  # pylint: disable=invalid-name
     See https://github.com/arviz-devs/arviz/pull/1504 for more discussion.
     """
 
-    def __init__(self, *props: Union[str, list[str]]) -> None:
-        self.props: tuple[Union[str, list[str]], ...] = props
+    def __init__(self, *props: str | list[str]) -> None:
+        self.props: tuple[str | list[str], ...] = props
 
     def __call__(
         self, func: Callable[[RequiresArgTypeT], RequiresReturnTypeT]
-    ) -> Callable[[RequiresArgTypeT], Optional[RequiresReturnTypeT]]:  # noqa: D202
+    ) -> Callable[[RequiresArgTypeT], RequiresReturnTypeT | None]:  # noqa: D202
         """Wrap the decorated function."""
 
-        def wrapped(cls: RequiresArgTypeT) -> Optional[RequiresReturnTypeT]:
+        def wrapped(cls: RequiresArgTypeT) -> RequiresReturnTypeT | None:
             """Return None if not all props are available."""
             for prop in self.props:
                 prop_list = [prop] if isinstance(prop, str) else prop

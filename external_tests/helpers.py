@@ -5,7 +5,7 @@ import importlib
 import logging
 import os
 import sys
-from typing import Any, Optional
+from typing import Any
 
 import cloudpickle
 import numpy as np
@@ -135,18 +135,18 @@ def pystan_noncentered_schools(data, draws, chains):
     schools_code = """
         data {
             int<lower=0> J;
-            real y[J];
-            real<lower=0> sigma[J];
+            array[J] real y;
+            array[J] real<lower=0> sigma;
         }
 
         parameters {
             real mu;
             real<lower=0> tau;
-            real eta[J];
+            array[J] real eta;
         }
 
         transformed parameters {
-            real theta[J];
+            array[J] real theta;
             for (j in 1:J)
                 theta[j] = mu + tau * eta[j];
         }
@@ -159,8 +159,8 @@ def pystan_noncentered_schools(data, draws, chains):
         }
 
         generated quantities {
-            vector[J] log_lik;
-            vector[J] y_hat;
+            array[J] real log_lik;
+            array[J] real y_hat;
             for (j in 1:J) {
                 log_lik[j] = normal_lpdf(y[j] | theta[j], sigma[j]);
                 y_hat[j] = normal_rng(theta[j], sigma[j]);
@@ -185,10 +185,10 @@ def load_cached_models(eight_schools_data, draws, chains, libs=None):
     """Load pystan, emcee, and pyro models from pickle."""
     here = os.path.dirname(os.path.abspath(__file__))
     supported = (
-        ("pystan", pystan_noncentered_schools),
+        # ("pystan", pystan_noncentered_schools),
         ("emcee", emcee_schools_model),
-        ("pyro", pyro_noncentered_schools),
-        ("numpyro", numpyro_schools_model),
+        # ("pyro", pyro_noncentered_schools),
+        # ("numpyro", numpyro_schools_model),
     )
     data_directory = os.path.join(here, "saved_models")
     if not os.path.isdir(data_directory):
@@ -241,9 +241,7 @@ def running_on_ci() -> bool:
     return os.environ.get("ARVIZ_CI_MACHINE") is not None
 
 
-def importorskip(
-    modname: str, minversion: Optional[str] = None, reason: Optional[str] = None
-) -> Any:
+def importorskip(modname: str, minversion: str | None = None, reason: str | None = None) -> Any:
     """Import and return the requested module ``modname``.
 
         Doesn't allow skips on CI machine.
