@@ -69,7 +69,7 @@ def test_from_dict(data, eight_schools_params, save_warmup):
         check_var_names_coords_dims(dt.warmup_posterior)
         check_var_names_coords_dims(dt.warmup_posterior_predictive)
 
-    pred_dims = dt.predictions.dims["school_pred"]
+    pred_dims = dt.predictions.sizes["school_pred"]
     assert pred_dims == 8
     assert list(dt.predictions.school_pred.values) == list("abcdefgh")
 
@@ -96,9 +96,9 @@ def test_from_dict_auto_skip_event_dims():
     }
     fails = check_multiple_attrs(test_dict, dt)
     assert not fails
-    assert "school" in dt.posterior_predictive.dims
-    assert "school" in dt.observed_data.dims
-    assert "school" not in dt.log_likelihood.dims
+    assert "school" in dt.posterior_predictive.sizes
+    assert "school" in dt.observed_data.sizes
+    assert "school" not in dt.log_likelihood.sizes
 
 
 def test_from_dict_attrs(data):

@@ -12,7 +12,7 @@ def test_1d_dataset():
     assert len(dataset.data_vars) == 1
 
     assert set(dataset.coords) == {"sample"}
-    assert dataset.dims["sample"] == size
+    assert dataset.sizes["sample"] == size
 
 
 def test_warns_bad_shape():
@@ -22,8 +22,8 @@ def test_warns_bad_shape():
         convert_to_dataset(ary, sample_dims=("chain", "draw"))
     # Shape should now be (draw, chain, *shape)
     dataset = convert_to_dataset(ary, sample_dims=("draw", "chain"))
-    assert dataset.dims["chain"] == 4
-    assert dataset.dims["draw"] == 100
+    assert dataset.sizes["chain"] == 4
+    assert dataset.sizes["draw"] == 100
 
 
 def test_nd_to_dataset():
@@ -33,9 +33,9 @@ def test_nd_to_dataset():
     var_name = list(dataset.data_vars)[0]
 
     assert len(dataset.coords) == len(shape)
-    assert dataset.dims["chain"] == shape[0]
-    assert dataset.dims["draw"] == shape[1]
-    assert dataset.dims["pred_id"] == shape[2]
+    assert dataset.sizes["chain"] == shape[0]
+    assert dataset.sizes["draw"] == shape[1]
+    assert dataset.sizes["pred_id"] == shape[2]
     assert dataset[var_name].shape == shape
 
 
@@ -48,8 +48,8 @@ def test_nd_to_datatree():
     var_name = list(prior.data_vars)[0]
 
     assert len(prior.coords) == len(shape)
-    assert prior.dims["chain"] == shape[0]
-    assert prior.dims["draw"] == shape[1]
+    assert prior.sizes["chain"] == shape[0]
+    assert prior.sizes["draw"] == shape[1]
     assert prior[var_name].shape == shape
 
 
@@ -63,8 +63,8 @@ def test_more_chains_than_draws():
     var_name = list(prior.data_vars)[0]
 
     assert len(prior.coords) == len(shape)
-    assert prior.dims["chain"] == shape[0]
-    assert prior.dims["draw"] == shape[1]
+    assert prior.sizes["chain"] == shape[0]
+    assert prior.sizes["draw"] == shape[1]
     assert prior[var_name].shape == shape
 
 
@@ -201,7 +201,7 @@ class TestExtract:
     def test_default(self, centered_eight):
         post = extract(centered_eight)
         assert isinstance(post, xr.Dataset)
-        assert "sample" in post.dims
+        assert "sample" in post.sizes
         assert post.theta.size == (4 * 500 * 8)
 
     def test_seed(self, centered_eight):
@@ -211,9 +211,9 @@ class TestExtract:
 
     def test_no_combine(self, centered_eight):
         post = extract(centered_eight, combined=False)
-        assert "sample" not in post.dims
-        assert post.dims["chain"] == 4
-        assert post.dims["draw"] == 500
+        assert "sample" not in post.sizes
+        assert post.sizes["chain"] == 4
+        assert post.sizes["draw"] == 500
 
     def test_var_name_group(self, centered_eight):
         prior = extract(centered_eight, group="prior", var_names="the", filter_vars="like")
@@ -230,7 +230,7 @@ class TestExtract:
 
     def test_subset_samples(self, centered_eight):
         post = extract(centered_eight, num_samples=10)
-        assert post.dims["sample"] == 10
+        assert post.sizes["sample"] == 10
         assert post.attrs == centered_eight.posterior.attrs
 
     def test_dataarray_return(self, centered_eight):
