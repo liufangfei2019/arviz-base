@@ -68,6 +68,7 @@ def no_remote_data(monkeypatch, tmpdir):
     )
 
 
+@pytest.mark.filterwarnings("ignore:numpy.ndarray size changed")
 def test_load_local_arviz_data():
     idata = load_arviz_data("centered_eight")
     assert isinstance(idata, DataTree)
