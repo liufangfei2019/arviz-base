@@ -83,6 +83,7 @@ select = [
     "UP",  # pyupgrade
     "I",  # isort
     "PL",  # Pylint
+    "TID",  # Absolute imports
 ]
 ignore = [
     "PLR0912",  # too many branches
@@ -91,13 +92,17 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
+"docs/source/**/*.ipynb" = ["D", "E", "F", "I", "NPY", "PL", "TID", "UP", "W"]
 "src/arviz_base/__init__.py" = ["I", "F401", "E402", "F403"]
 "src/arviz_base/example_data/**/*" = ["F", "E", "W", "D", "I", "PL"]
-"tests/**/*" = ["D", "PLR2004"]
-"external_tests/**/*" = ["D", "PLR2004"]
+"tests/**/*" = ["D", "PLR2004", "TID252"]
+"external_tests/**/*" = ["D", "PLR2004", "TID252"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"  # Disallow all relative imports.
 
 [tool.ruff.format]
 docstring-code-format = false
