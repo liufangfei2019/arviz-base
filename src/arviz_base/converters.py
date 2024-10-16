@@ -187,16 +187,20 @@ def convert_to_dataset(obj, *, group="posterior", **kwargs):
     return dataset.to_dataset()
 
 
-def extract(
+# TODO: remove this ignore about too many statements once the code uses validator functions
+def extract(  # noqa: PLR0915
     data,
     group="posterior",
-    combined=True,
     sample_dims=None,
+    *,
+    combined=True,
     var_names=None,
     filter_vars=None,
     num_samples=None,
+    weights=None,
+    resampling_method=None,
     keep_dataset=False,
-    rng=None,
+    random_seed=None,
 ):
     """Extract a group or group subset from a DataTree.
 
@@ -206,13 +210,14 @@ def extract(
         DataTree from which to extract the data.
     group : str, optional
         Which group to extract data from.
-    combined : bool, optional
-        Combine `sample_dims` dimensions into ``sample``. Won't work if
-        a dimension named ``sample`` already exists.
-    sample_dims : iterable of hashable, optional
+    sample_dims : sequence of hashable, optional
         List of dimensions that should be considered sampling dimensions.
         Random subsets and potential stacking if ``combine=True`` happen
         over these dimensions only. Defaults to ``rcParams["data.sample_dims"]``.
+    combined : bool, optional
+        Combine `sample_dims` dimensions into ``sample``. Won't work if
+        a dimension named ``sample`` already exists.
+        It is irrelevant and ignored when `sample_dims` is a single dimension.
     var_names : str or list of str, optional
         Variables to be extracted. Prefix the variables by `~` when you want to exclude them.
     filter_vars: {None, "like", "regex"}, optional
@@ -223,15 +228,20 @@ def extract(
         Like with plotting, sometimes it's easier to subset saying what to exclude
         instead of what to include
     num_samples : int, optional
-        Extract only a subset of the samples. Only valid if ``combined=True``
+        Extract only a subset of the samples. Only valid if ``combined=True`` or
+        `sample_dims` represents a single dimension.
+    weights : array-like, optional
+        Extract a weighted subset of the samples. Only valid if `num_samples` is not ``None``.
+    resampling_method : str, optional
+        Method to use for resampling. Default is "multinomial". Options are "multinomial"
+        and "stratified". For stratified resampling, weights must be provided.
+        Default is "stratified" if weights are provided, "multinomial" otherwise.
     keep_dataset : bool, optional
         If true, always return a DataSet. If false (default) return a DataArray
         when there is a single variable.
-    rng : bool, int, numpy.Generator, optional
-        Shuffle the samples, only valid if ``combined=True``. By default,
-        samples are shuffled if ``num_samples`` is not ``None``, and are left
-        in the same order otherwise. This ensures that subsetting the samples doesn't return
-        only samples from a single chain and consecutive draws.
+    random_seed : int, numpy.Generator, optional
+        Random number generator or seed. Only used if ``weights`` is not ``None``
+        or if ``num_samples`` is not ``None``.
 
     Returns
     -------
@@ -261,12 +271,20 @@ def extract(
         az.extract(idata, group="prior", combined=False)
 
     """
+    # TODO: use validator function
+    if sample_dims is None:
+        sample_dims = rcParams["data.sample_dims"]
+    if isinstance(sample_dims, str):
+        sample_dims = [sample_dims]
+    if len(sample_dims) == 1:
+        combined = True
     if num_samples is not None and not combined:
-        raise ValueError("num_samples is only compatible with combined=True")
-    if rng is None:
-        rng = num_samples is not None
-    if rng is not False and not combined:
-        raise ValueError("rng is only compatible with combined=True")
+        raise ValueError(
+            "num_samples is only compatible with combined=True or length 1 sample_dims"
+        )
+    if weights is not None and num_samples is None:
+        raise ValueError("weights are only compatible with num_samples")
+
     data = convert_to_dataset(data, group=group)
     var_names = _var_names(var_names, data, filter_vars)
     if var_names is not None:
@@ -275,23 +293,66 @@ def extract(
         data = data[var_names]
     elif len(data.data_vars) == 1:
         data = data[list(data.data_vars)[0]]
-    if combined:
-        if sample_dims is None:
-            sample_dims = rcParams["data.sample_dims"]
+
+    if weights is not None:
+        resampling_method = "stratified" if resampling_method is None else resampling_method
+        weights = np.array(weights).ravel()
+        if len(weights) != np.prod([data.sizes[dim] for dim in sample_dims]):
+            raise ValueError("Weights must have the same size as `sample_dims`")
+    else:
+        resampling_method = "multinomial" if resampling_method is None else resampling_method
+
+    if resampling_method not in ("multinomial", "stratified"):
+        raise ValueError(f"Invalid resampling_method: {resampling_method}")
+
+    if combined and len(sample_dims) != 1:
         data = data.stack(sample=sample_dims)
-    # 0 is a valid seed se we need to check for rng being exactly boolean
-    if rng is not False:
-        if rng is True:
+        combined_dim = "sample"
+    elif len(sample_dims) == 1:
+        combined_dim = sample_dims[0]
+
+    if weights is not None or num_samples is not None:
+        if random_seed is None:
             rng = np.random.default_rng()
-        # default_rng takes ints or sequences of ints
-        try:
-            rng = np.random.default_rng(rng)
-            random_subset = rng.permutation(np.arange(len(data["sample"])))
-        except TypeError as err:
-            raise TypeError("Unable to initializate numpy random Generator from rng") from err
-        except AttributeError as err:
-            raise AttributeError("Unable to use rng to generate a permutation") from err
-        data = data.isel(sample=random_subset)
-    if num_samples is not None:
-        data = data.isel(sample=slice(None, num_samples))
+        elif isinstance(random_seed, int | np.integer):
+            rng = np.random.default_rng(random_seed)
+        elif isinstance(random_seed, np.random.Generator):
+            rng = random_seed
+        else:
+            raise ValueError(f"Invalid random_seed value: {random_seed}")
+
+        replace = weights is not None
+
+        if resampling_method == "multinomial":
+            resample_indices = rng.choice(
+                np.arange(data.sizes[combined_dim]),
+                size=num_samples,
+                p=weights,
+                replace=replace,
+            )
+        elif resampling_method == "stratified":
+            if weights is None:
+                raise ValueError("Weights must be provided for stratified resampling")
+            resample_indices = _stratified_resample(weights, rng)
+
+        data = data.isel({combined_dim: resample_indices})
+
     return data
+
+
+def _stratified_resample(weights, rng):
+    """Stratified resampling."""
+    N = len(weights)
+    single_uniform = (rng.random(N) + np.arange(N)) / N
+    indexes = np.zeros(N, dtype=int)
+    cum_sum = np.cumsum(weights)
+
+    i, j = 0, 0
+    while i < N:
+        if single_uniform[i] < cum_sum[j]:
+            indexes[i] = j
+            i += 1
+        else:
+            j += 1
+
+    return indexes
