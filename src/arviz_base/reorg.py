@@ -386,7 +386,7 @@ def explode_dataset_dims(ds, dim, labeller=None):
     )
 
 
-def references_to_dataset(references, ds, sample_dims=None):
+def references_to_dataset(references, ds, sample_dims=None, ref_dim=None):
     """Generate an :class:`~xarray.Dataset` compabible with `ds` from `references`.
 
     Cast common formats to provide references to a compatible Dataset.
@@ -414,13 +414,17 @@ def references_to_dataset(references, ds, sample_dims=None):
     sample_dims : iterable of hashable, optional
         Sample dimensions in `ds`. The dimensions in the output will be the dimensions
         in `ds` minus `sample_dims` plus optionally a "ref_line_dim" for non-scalar references.
+    ref_dim : str or list optional
+        Names for the new dimensions created during reference value broadcasting. Defaults to None.
+        By default, "ref_dim" is added for 1D references and "ref_dim_x" for N-dimensional
+        references when broadcasting over one or more variables.
 
     Returns
     -------
     Dataset
-        A Dataset with a subset of the variables, dimensions and coordinate names in `ds`,
-        with only an extra dimension "ref_line_dim" added when multiple references are requested
-        for one or some of the variables.
+       A Dataset containing a subset of the variables, dimensions, and coordinate names from ds,
+       with additional "ref_dim" dimensions added when multiple references are requested for one
+       or more variables.
 
     See Also
     --------
@@ -467,6 +471,8 @@ def references_to_dataset(references, ds, sample_dims=None):
         sample_dims = rcParams["data.sample_dims"]
     if isinstance(sample_dims, str):
         sample_dims = [sample_dims]
+    if isinstance(ref_dim, str):
+        ref_dim = [ref_dim]
 
     # start covering cases, for dataarray, if its name is a variable convert to dataset
     # if it has no name treat is an array-like
@@ -488,11 +494,6 @@ def references_to_dataset(references, ds, sample_dims=None):
         return xr.full_like(aux_ds, references, dtype=np.array(references).dtype)
     # for array-like convert to dict so it is handled later on
     if isinstance(references, list | tuple | np.ndarray):
-        if np.ndim(references) > 1:
-            raise ValueError(
-                "Only 1D arrays are allowed. To generate more complex reference datasets "
-                "the xarray.Dataset constructor should be used."
-            )
         references = {var_name: references for var_name in ds.data_vars}
     if isinstance(references, dict):
         ref_dict = {}
@@ -500,22 +501,34 @@ def references_to_dataset(references, ds, sample_dims=None):
             if var_name not in references:
                 continue
             ref_values = np.atleast_1d(references[var_name])
-            if np.ndim(ref_values) > 1:
-                raise ValueError(
-                    f"Only 1D arrays are allowed but the values for {var_name} variable have "
-                    "more dimensions. To generate more complex reference datasets the "
-                    "xarray.Dataset constructor should be used."
+            new_dims = ref_values.shape
+            if ref_dim is None:
+                new_dim_names = (
+                    ["ref_dim"]
+                    if len(new_dims) == 1
+                    else [f"ref_dim_{i}" for i in range(len(new_dims))]
                 )
+            else:
+                if len(ref_dim) != len(new_dims):
+                    raise ValueError(
+                        f"ref_dim length ({len(ref_dim)}) does not match reference values "
+                        f"length ({len(new_dims)}) for data variable {var_name}"
+                    )
+                new_dim_names = ref_dim[: len(new_dims)]
             sizes = {dim: length for dim, length in da.sizes.items() if dim not in sample_dims}
+            full_shape = list(sizes.values()) + list(new_dims)
+            data = np.broadcast_to(ref_values, full_shape)
+
             ref_dict[var_name] = xr.DataArray(
-                np.full(list(sizes.values()) + [len(ref_values)], ref_values),
-                dims=list(sizes) + ["ref_line_dim"],
-                coords={"ref_line_dim": np.arange(len(ref_values))}
+                data,
+                dims=list(sizes) + new_dim_names,
+                coords=dict(zip(new_dim_names, [np.arange(size) for size in new_dims]))
                 | {
                     coord_name: coord_da
                     for coord_name, coord_da in da.coords.items()
-                    if coord_da.dims[0] not in sample_dims
+                    if not set(coord_da.dims).intersection(sample_dims)
                 },
             )
+
         return xr.Dataset(ref_dict)
     raise TypeError("Unrecognized input type for `references`")
