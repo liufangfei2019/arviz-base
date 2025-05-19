@@ -176,11 +176,17 @@ def convert_to_dataset(obj, *, group="posterior", **kwargs):
         If `obj` can't be converted to a DataTree from which to extract the
         `group` Dataset.
 
+    Examples
+    --------
+    >>> import arviz_base as az
+    >>> idata = az.load_arviz_data("centered_eight")
+    >>> dataset = az.convert_to_dataset(idata)
+
     See Also
     --------
-    dict_to_dataset
-        Convert a dictionary of arrays to a :class:`xarray.Dataset` following ArviZ conventions.
+    dict_to_dataset : Convert a dictionary of arrays to a :class:`xarray.Dataset` following ArviZ conventions.
     """
+
     if isinstance(obj, DataTree) and obj.name == group:
         return obj.to_dataset()
     inference_data = convert_to_datatree(obj, group=group, **kwargs)
