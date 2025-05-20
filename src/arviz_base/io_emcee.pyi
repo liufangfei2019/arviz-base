@@ -41,7 +41,7 @@ class EmceeConverter:
 def from_emcee(
     sampler: emcee.EnsembleSampler | None = ...,
     var_names: list[str] | None = ...,
-    slices: list[ArrayLike | slice] | None = ...,
+    slices: list[ArrayLike] | slice | None = ...,
     arg_names: list[str] | None = ...,
     arg_groups: list[str] | None = ...,
     blob_names: list[str] | None = ...,

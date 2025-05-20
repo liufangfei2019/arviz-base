@@ -177,7 +177,6 @@ def convert_to_dataset(obj, *, group="posterior", **kwargs):
     >>> convert_to_dataset({"mu": np.random.randn(500)})
     <xarray.Dataset> ...  # Posterior group with 'mu' variable
     """
-
     if isinstance(obj, DataTree) and obj.name == group:
         return obj.to_dataset()
     inference_data = convert_to_datatree(obj, group=group, **kwargs)
